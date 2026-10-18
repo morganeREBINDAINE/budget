@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { type LayoutChangeEvent } from 'react-native';
+import { type LayoutChangeEvent, Pressable } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { Box, Card, Row, Stack, Text, useTheme } from '@/design-system';
@@ -15,7 +15,7 @@ const STROKE = 30;
 const LABEL_SPACE = 34; // marge autour de l'anneau pour les pourcentages
 const GAP = 4; // espace entre deux segments, en px le long du cercle
 const CORNER = 6; // rayon des coins arrondis des segments
-const MIN_LABEL_PERCENT = 3; // en dessous, pas d'étiquette (chevauchements)
+const DIMMED_OPACITY = 0.3; // segments et légende non touchés pendant un appui
 const LABEL_WIDTH = 44;
 const DOT = 10;
 
@@ -46,6 +46,13 @@ function roundedArc(cx: number, cy: number, r: number, a0: number, a1: number): 
 export function CategoryChart({ totals, totalDa }: Props) {
   const { colors, spacing } = useTheme();
   const [width, setWidth] = useState(0);
+  // Catégorie sous le doigt : surbrillance uniquement pendant l'appui.
+  const [pressedId, setPressedId] = useState<string | null>(null);
+  const pressHandlers = (id: string) => ({
+    onPressIn: () => setPressedId(id),
+    onPressOut: () => setPressedId(null),
+  });
+  const opacityOf = (id: string) => (pressedId && pressedId !== id ? DIMMED_OPACITY : 1);
 
   const segments = totals
     .filter((t) => t.amountDa > 0)
@@ -74,6 +81,7 @@ export function CategoryChart({ totals, totalDa }: Props) {
                   stroke={segments[0].category.color}
                   strokeWidth={STROKE}
                   fill="none"
+                  {...pressHandlers(segments[0].category.id)}
                 />
               ) : (
                 segments.map(({ category }, i) => {
@@ -85,6 +93,8 @@ export function CategoryChart({ totals, totalDa }: Props) {
                       key={category.id}
                       d={roundedArc(center, center, r, a0, Math.max(a1, a0 + 0.01))}
                       fill={category.color}
+                      opacity={opacityOf(category.id)}
+                      {...pressHandlers(category.id)}
                     />
                   );
                 })
@@ -93,26 +103,30 @@ export function CategoryChart({ totals, totalDa }: Props) {
 
             {segments.map(({ category }, i) => {
               const percent = Math.round(fractions[i] * 100);
-              if (percent < MIN_LABEL_PERCENT) return null;
               const angle = (starts[i] + fractions[i] / 2) * 2 * Math.PI - Math.PI / 2;
               const labelR = r + STROKE / 2 + LABEL_SPACE / 2;
               return (
-                <Text
+                <Pressable
                   key={category.id}
-                  variant="body"
-                  weight="extrabold"
-                  align="center"
-                  tabular
+                  {...pressHandlers(category.id)}
                   style={{
                     position: 'absolute',
                     width: LABEL_WIDTH,
                     left: center + labelR * Math.cos(angle) - LABEL_WIDTH / 2,
                     top: center + labelR * Math.sin(angle) - spacing.sm - spacing.xxs,
-                    color: category.color,
+                    opacity: opacityOf(category.id),
                   }}
                 >
-                  {percent}%
-                </Text>
+                  <Text
+                    variant="body"
+                    weight="extrabold"
+                    align="center"
+                    tabular
+                    style={{ color: category.color }}
+                  >
+                    {percent < 1 ? '<1' : percent}%
+                  </Text>
+                </Pressable>
               );
             })}
 
@@ -142,17 +156,33 @@ export function CategoryChart({ totals, totalDa }: Props) {
           rowGap: spacing.md,
         }}
       >
-        {segments.map(({ category }) => (
-          <Row key={category.id} gap="sm" style={{ width: '33.33%', paddingRight: spacing.xs }}>
-            <Box
-              radius="full"
-              style={{ width: DOT, height: DOT, backgroundColor: category.color }}
-            />
-            <Text variant="bodySmall" weight="semibold" numberOfLines={1} style={{ flexShrink: 1 }}>
-              {category.name}
-            </Text>
-          </Row>
-        ))}
+        {segments.map(({ category }) => {
+          const pressed = pressedId === category.id;
+          return (
+            <Row
+              key={category.id}
+              gap="sm"
+              style={{
+                width: '33.33%',
+                paddingRight: spacing.xs,
+                opacity: opacityOf(category.id),
+              }}
+            >
+              <Box
+                radius="full"
+                style={{ width: DOT, height: DOT, backgroundColor: category.color }}
+              />
+              <Text
+                variant="bodySmall"
+                weight={pressed ? 'extrabold' : 'semibold'}
+                numberOfLines={1}
+                style={[{ flexShrink: 1 }, pressed && { color: category.color }]}
+              >
+                {category.name}
+              </Text>
+            </Row>
+          );
+        })}
       </Row>
     </Card>
   );
