@@ -22,8 +22,8 @@ Ordre de travail : **1. squelette → 2. toutes les pages (UI seule, données fa
 - Export / import d'une sauvegarde JSON complète.
 - Paiements réguliers (loyer, abonnements…) : à l'échéance, un encart rouge s'affiche sur l'accueil et y reste jusqu'au clic sur « J'ai payé » (avec modale de confirmation), ce qui enregistre la dépense.
 - Suivi des erreurs avec Sentry.
-- Gestion des dettes (détails à spécifier avant implémentation).
-- Menu de navigation : icône burger en haut à gauche de la barre haute, ouvrant un menu avec 3 entrées : **Budget** (accueil / diagramme), **Dettes**, **Mon compte**.
+- Gestion des dettes, indépendante du budget : ce que je dois / ce qu'on me doit, personne (noms mémorisés et proposés en autocomplétion), montant en DA ou EUR (taux du jour si EUR), date, note, remboursements partiels.
+- Menu de navigation : icône burger en haut à gauche de la barre haute, ouvrant un tiroir qui glisse depuis la gauche avec 3 entrées : **Budget** (accueil / diagramme), **Dettes**, **Mon compte**.
 
 ### Hors périmètre v1
 
@@ -41,9 +41,10 @@ iOS · multilingue / i18n (textes en français écrits en dur) · thème sombre 
 | Éditeur de catégorie | `/(app)/categories/[id]`                                                 | Nom, palette de couleurs (arc-en-ciel), grille d'icônes Material Community Icons (blanches sur fond de couleur)                                                                                                                                                               |
 | Paiements réguliers  | `/(app)/recurring`                                                       | Liste des paiements réguliers (nom, montant, catégorie, prochaine échéance), bouton « Ajouter » ; accès depuis la page Compte                                                                                                   |
 | Éditeur de paiement  | `/(app)/recurring/new`, `/(app)/recurring/[id]`                          | Nom, montant en DA, catégorie, fréquence (mensuel / annuel), jour du mois (1–31) + mois si annuel, date de début, actif oui/non, note ; bouton Enregistrer (+ Supprimer en modification)                                                                                        |
-| Dettes               | `/(app)/debts`                                                           | À spécifier (liste des dettes, ajout / modification / remboursement…)                                                                                                                                                           |
+| Dettes               | `/(app)/debts`                                                           | Onglets « Je dois » / « On me doit », total restant dû par onglet, liste des dettes (personne, montant, reste dû, date, badge « soldée »), bouton « Ajouter » |
+| Éditeur de dette     | `/(app)/debts/new`, `/(app)/debts/[id]`                                  | Sens (je dois / on me doit), personne (champ avec autocomplétion des noms enregistrés), montant + devise (DA / EUR), taux du jour si EUR, date, note ; en modification : liste des remboursements + « Ajouter un remboursement » (montant, devise/taux, date, note), bouton Supprimer |
 
-**Menu burger** : icône en haut à gauche de la barre haute ; ouvre un menu (tiroir latéral ou feuille — à décider) avec Budget (`/(app)/index`), Dettes (`/(app)/debts`) et Mon compte (`/(app)/account`).
+**Menu burger** : icône en haut à gauche de la barre haute ; ouvre un tiroir qui glisse depuis la gauche avec Budget (`/(app)/index`), Dettes (`/(app)/debts`) et Mon compte (`/(app)/account`).
 
 **Encart « paiement dû » (Accueil)** : en haut de l'accueil, un encart rouge par échéance arrivée et non payée (nom, montant, date d'échéance, « en retard de N jours » si dépassée), affiché à partir du jour J et **jusqu'au clic sur « J'ai payé »**, quel que soit le mois consulté. Le clic ouvre une modale de confirmation (« Confirmer le paiement de Loyer — 25 000 DA ? », date de paiement modifiable, aujourd'hui par défaut) ; la confirmation crée la dépense correspondante et fait disparaître l'encart.
 
@@ -115,12 +116,57 @@ Catégories par défaut : voiture, factures, maison, hanout, khaddar, boucherie,
 
 Échéances dues = toutes les dates d'échéance calculées entre `start_date` et aujourd'hui, sans ligne dans `recurring_occurrences` (calcul côté client, rien n'est pré-généré).
 
+**`debt_people`** (noms enregistrés pour l'autocomplétion)
+
+| Champ                   | Type             | Règles                                       |
+| ----------------------- | ---------------- | -------------------------------------------- |
+| id                      | uuid             | clé primaire, généré sur le client           |
+| user_id                 | uuid             | = `auth.uid()`                               |
+| name                    | text             | requis, non vide, unique par utilisateur (insensible à la casse) |
+| created_at / updated_at | timestamptz      |                                              |
+| deleted_at              | timestamptz null | suppression logique                          |
+
+Un nom saisi qui n'existe pas encore est créé automatiquement à l'enregistrement de la dette.
+
+**`debts`**
+
+| Champ                   | Type             | Règles                                                     |
+| ----------------------- | ---------------- | ---------------------------------------------------------- |
+| id                      | uuid             | clé primaire, généré sur le client                         |
+| user_id                 | uuid             | = `auth.uid()`                                             |
+| direction               | text             | `i_owe` (je dois) \| `owed_to_me` (on me doit)             |
+| person_id               | uuid             | → `debt_people`, requis                                    |
+| amount_da               | int              | > 0, montant final en dinars entiers                       |
+| currency                | text             | `DZD` \| `EUR`                                             |
+| original_amount_cents   | int null         | montant EUR saisi (centimes), si `currency = EUR`          |
+| eur_rate                | numeric null     | taux DA/EUR du jour saisi, si `currency = EUR`             |
+| date                    | date             | date de la dette                                           |
+| note                    | text null        | facultative                                                |
+| created_at / updated_at | timestamptz      |                                                            |
+| deleted_at              | timestamptz null | suppression logique                                        |
+
+**`debt_repayments`** (remboursements partiels)
+
+| Champ                   | Type             | Règles                                                |
+| ----------------------- | ---------------- | ----------------------------------------------------- |
+| id                      | uuid             | clé primaire, généré sur le client                    |
+| user_id                 | uuid             | = `auth.uid()`                                        |
+| debt_id                 | uuid             | → `debts`                                             |
+| amount_da               | int              | > 0, ≤ reste dû                                       |
+| currency / original_amount_cents / eur_rate | | mêmes règles que `debts`                    |
+| date                    | date             | aujourd'hui par défaut                                |
+| note                    | text null        | facultative                                           |
+| created_at / updated_at | timestamptz      |                                                       |
+| deleted_at              | timestamptz null | suppression logique                                   |
+
+Reste dû = `debts.amount_da − Σ debt_repayments.amount_da`. Reste = 0 → dette « soldée ». **Aucun lien avec le budget** : ni les dettes ni les remboursements ne créent de transaction.
+
 **Tables locales uniquement (SQLite)**
 
 - `sync_queue` : id, table_name, row_id, op (`upsert`), payload JSON, attempts, last_error, created_at.
 - `settings` : clé/valeur — `last_eur_rate`, `last_pulled_at`, `seeded`.
 
-**Supabase** : RLS activé sur toutes les tables synchronisées (`categories`, `transactions`, `recurring_payments`, `recurring_occurrences`), politique `user_id = auth.uid()` pour select/insert/update.
+**Supabase** : RLS activé sur toutes les tables synchronisées (`categories`, `transactions`, `recurring_payments`, `recurring_occurrences`, `debt_people`, `debts`, `debt_repayments`), politique `user_id = auth.uid()` pour select/insert/update.
 
 ### Stack
 
@@ -188,8 +234,8 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [ ] **Compte** : profil, carte d'état de synchro (afficher les 4 états avec des valeurs factices), Catégories, Exporter, Importer, Déconnexion.
 - [ ] **Catégories** + **Éditeur** : liste des 9, nom, couleur, icône.
 - [ ] **Paiements réguliers** + **Éditeur** : liste, formulaire ; encarts rouges factices sur l'accueil (un dû aujourd'hui, un en retard), modale de confirmation « J'ai payé ».
-- [ ] **Menu burger** : icône en haut à gauche de la barre haute, menu Budget / Dettes / Mon compte.
-- [ ] **Dettes** : spécifier le besoin (données, écrans, modèle `debts`), puis UI avec données factices.
+- [ ] **Menu burger** : icône en haut à gauche de la barre haute, tiroir glissant depuis la gauche, entrées Budget / Dettes / Mon compte.
+- [ ] **Dettes** + **Éditeur de dette** : onglets je dois / on me doit, liste virtualisée, formulaire avec autocomplétion des personnes, devise DA/EUR + taux, remboursements partiels (données factices).
 - [ ] Validation visuelle écran par écran contre le design Stitch.
 
 **Terminé quand** : chaque écran correspond au design avec des données factices, et tous les parcours se cliquent de bout en bout.
@@ -204,6 +250,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [ ] Validation des formulaires (montant > 0, taux > 0 si EUR, catégorie requise pour une dépense).
 - [ ] Mémoriser `last_eur_rate` et préremplir le champ taux.
 - [ ] Paiements réguliers : schéma `recurring_payments` + `recurring_occurrences`, `lib/recurring.ts` (calcul des échéances dues, jour 31 → dernier jour du mois), « J'ai payé » = création de la dépense + de l'occurrence dans une même transaction SQLite. Catégorie utilisée par un paiement régulier → suppression interdite.
+- [ ] Dettes : schéma `debt_people` + `debts` + `debt_repayments`, création auto de la personne à l'enregistrement, calcul du reste dû, validation (montant > 0, taux > 0 si EUR, remboursement ≤ reste dû, personne requise). Tests unitaires du reste dû et des conversions.
 - [ ] Tests unitaires : conversion, totaux, tri, règle de suppression des catégories, calcul des échéances (mensuel et annuel, mois courts, 29 février, échéances en retard multiples, paiement déjà confirmé).
 
 **Terminé quand** : l'app fonctionne entièrement en mode avion, et les données survivent à un redémarrage.
@@ -240,7 +287,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 
 ## Phase 7 — Export / import JSON
 
-- [ ] Format : `{ version, exported_at, categories[], transactions[], recurring_payments[], recurring_occurrences[] }`.
+- [ ] Format : `{ version, exported_at, categories[], transactions[], recurring_payments[], recurring_occurrences[], debt_people[], debts[], debt_repayments[] }`.
 - [ ] Export (icône de l'accueil + page Compte) : écrire le fichier puis ouvrir la feuille de partage Android.
 - [ ] Import (page Compte) : choisir le fichier, valider le format et la version, confirmer, **remplacer** les données locales, puis tout mettre en file pour la synchro.
 - [ ] Tests unitaires : aller-retour export → import identique, rejet des fichiers invalides.
