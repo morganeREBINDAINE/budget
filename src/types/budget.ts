@@ -5,6 +5,7 @@ export type Category = {
   id: string;
   name: string;
   color: string;
+  // Emoji (ex. « 🛒 »).
   icon: string;
   position: number;
 };

@@ -40,19 +40,21 @@ export const palette = {
   backdrop: 'rgba(15, 23, 42, 0.65)',
 } as const;
 
-// Couleurs saturées des catégories (DESIGN.md §2.3).
+// Couleurs des catégories : nuancier arc-en-ciel vif, dans l'ordre du spectre.
+// Les catégories (position 1 → 9) les reçoivent dans cet ordre.
 export const categoryColors = {
-  groceries: palette.emerald600,
-  restaurants: palette.orange600,
-  transport: palette.blue600,
-  subscriptions: palette.violet600,
-  education: palette.cyan600,
-  health: palette.rose600,
-  bills: palette.amber600,
-  leisure: palette.fuchsia600,
-  other: palette.slate600,
-  income: palette.emerald700,
+  red: '#EF4444',
+  orange: '#F97316',
+  amber: '#F59E0B',
+  lime: '#84CC16',
+  green: '#22C55E',
+  cyan: '#06B6D4',
+  blue: '#3B82F6',
+  violet: '#8B5CF6',
+  pink: '#EC4899',
 } as const;
+
+export const categoryRainbow = Object.values(categoryColors);
 
 export type PaletteColor = keyof typeof palette;
 export type CategoryColor = keyof typeof categoryColors;

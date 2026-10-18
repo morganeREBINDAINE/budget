@@ -1,4 +1,3 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { memo } from 'react';
 
 import { Card, Row, Stack, Text, useTheme } from '@/design-system';
@@ -15,12 +14,11 @@ export const TransactionRow = memo(function TransactionRow({ transaction, catego
   const isIncome = transaction.type === 'income';
   const label = isIncome ? 'Entrée' : (category?.name ?? 'Sans catégorie');
   const title = transaction.note ?? label;
-  const icon = (
-    isIncome ? 'cash-plus' : (category?.icon ?? 'shape-outline')
-  ) as keyof typeof MaterialCommunityIcons.glyphMap;
+  const emoji = isIncome ? '💰' : (category?.icon ?? '📦');
+  const time = transaction.createdAt.slice(11, 16);
 
   return (
-    <Card padding="md" radius="xl" variant="flat">
+    <Card padding="lg" radius="xl">
       <Row gap="md">
         <Row
           justify="center"
@@ -31,7 +29,9 @@ export const TransactionRow = memo(function TransactionRow({ transaction, catego
             backgroundColor: isIncome ? colors.success : (category?.color ?? colors.textMuted),
           }}
         >
-          <MaterialCommunityIcons name={icon} size={24} color={colors.textOnColor} />
+          <Text variant="title" accessibilityElementsHidden>
+            {emoji}
+          </Text>
         </Row>
         <Stack flex={1} gap="xxs">
           <Text variant="heading" numberOfLines={1}>
@@ -42,7 +42,7 @@ export const TransactionRow = memo(function TransactionRow({ transaction, catego
             color={isIncome ? 'success' : 'textSecondary'}
             numberOfLines={1}
           >
-            {formatListDate(transaction.date)} · {label}
+            {formatListDate(transaction.date)}, {time} · {label}
           </Text>
         </Stack>
         <Stack align="flex-end" gap="xxs">

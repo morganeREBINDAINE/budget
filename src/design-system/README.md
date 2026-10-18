@@ -11,7 +11,8 @@ Hiérarchie : `tokens → theme → primitives → components`. Une couche basse
 | Fichier | Export | Valeurs |
 | --- | --- | --- |
 | `colors.ts` | `palette` | slate 50–900, indigo 50/500/600/700, emerald 50/500/600/700, rose 50/500/600, orange/blue/violet/cyan/amber/fuchsia 600, `backdrop`, white, black, transparent |
-| | `categoryColors` | `groceries` #059669, `restaurants` #EA580C, `transport` #2563EB, `subscriptions` #7C3AED, `education` #0891B2, `health` #E11D48, `bills` #D97706, `leisure` #C026D3, `other` #475569, `income` #047857 |
+| | `categoryColors` | nuancier arc-en-ciel vif : `red` #EF4444, `orange` #F97316, `amber` #F59E0B, `lime` #84CC16, `green` #22C55E, `cyan` #06B6D4, `blue` #3B82F6, `violet` #8B5CF6, `pink` #EC4899 |
+| | `categoryRainbow` | les mêmes couleurs en tableau, dans l'ordre du spectre (catégorie position 1 → 9) |
 | `spacing.ts` | `spacing` | none 0, xxs 2, xs 4, sm 8, md 12, lg 16, xl 20, xxl 24, xxxl 32 |
 | | `screenPadding` | 20 (marge latérale d'écran) |
 | | `minTouchTarget` | 48 |

@@ -4,6 +4,8 @@ import { Pressable } from 'react-native';
 import { minTouchTarget, Row, Text, useTheme } from '@/design-system';
 import { formatMonthYear, type YearMonth } from '@/lib/format';
 
+const PILL_MIN_WIDTH = 168;
+
 type Props = {
   value: YearMonth;
   onPrevious: () => void;
@@ -39,7 +41,6 @@ export function MonthSelector({ value, onPrevious, onNext }: Props) {
     <Row justify="center" gap="md">
       {arrow('chevron-left', 'Mois précédent', onPrevious)}
       <Row
-        flex={1}
         gap="sm"
         justify="center"
         bg="surface"
@@ -47,7 +48,7 @@ export function MonthSelector({ value, onPrevious, onNext }: Props) {
         radius="full"
         shadow="xs"
         paddingX="lg"
-        style={{ height: minTouchTarget }}
+        style={{ height: minTouchTarget, minWidth: PILL_MIN_WIDTH }}
       >
         <MaterialCommunityIcons name="calendar-blank-outline" size={18} color={colors.primary} />
         <Text variant="heading" numberOfLines={1}>

@@ -31,7 +31,7 @@ export function TotalCard({ kind, amountDa, subtitle }: Props) {
           }}
         >
           <MaterialCommunityIcons
-            name={isIncome ? 'arrow-bottom-left' : 'arrow-top-right'}
+            name={isIncome ? 'arrow-down' : 'arrow-up'}
             size={18}
             color={isIncome ? colors.success : colors.danger}
           />
