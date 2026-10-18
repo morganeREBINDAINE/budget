@@ -19,7 +19,7 @@ Hiérarchie : `tokens → theme → primitives → components`. Une couche basse
 |                 | `minTouchTarget`  | 48                                                                                                                                                                                                 |
 | `radius.ts`     | `radius`          | none 0, sm 8, md 12, lg 16, xl 24, xxl 32, full 9999                                                                                                                                               |
 | `typography.ts` | `fontFamily`      | regular, medium, semibold, bold, extrabold (Plus Jakarta Sans)                                                                                                                                     |
-|                 | `typography`      | `display` 32/800, `title` 18/700, `heading` 16/700, `body` 14/500, `bodyCompact` 13/600, `bodySmall` 12/400, `label` 12/700 uppercase, `caption` 11/600                                                                  |
+|                 | `typography`      | `display` 32/800, `title` 18/700, `heading` 16/700, `body` 14/500, `bodyCompact` 13/600, `bodySmall` 12/400, `label` 12/700 uppercase, `caption` 11/600                                            |
 | `shadows.ts`    | `shadows`         | none, xs, sm, card, soft, float, floatGreen, floatAccent (`boxShadow`)                                                                                                                             |
 | `motion.ts`     | `motion`          | `duration` fast 150 / base 250 / slow 400 ; `easing` standard / decelerate / accelerate (bezier) ; `pressScale` 0.98                                                                               |
 
@@ -93,7 +93,7 @@ Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, 
 
 - Ligne d'action d'une liste courte (réglages, menu) : pastille d'icône 40px, libellé, description facultative, chevron « › ».
 - `variant` : `default` (pastille `primarySoft`, texte `text`), `danger` (pastille `dangerSoft`, texte `danger` : déconnexion).
-- Props : `label` (requis), `description`, `icon` (`ReactNode`, posé sur la pastille), `onPress` (`() => void | Promise`), `showChevron` (défaut : affiché si `onPress`), `disabled`.
+- Props : `label` (requis), `description`, `icon` (`ReactNode`, posé sur la pastille), `iconBackground` (`variant` par défaut, `none` : pas de pastille, pour une icône qui a déjà son fond, ex. tuile de catégorie), `onPress` (`() => void | Promise`), `showChevron` (défaut : affiché si `onPress`), `disabled`.
 - Si `onPress` renvoie une Promise : spinner à la place du chevron, et un garde ignore les appuis jusqu'à la résolution.
 - Pour plusieurs lignes, les grouper dans une `Card padding="xs"`. Listes courtes et fixes uniquement (pas de virtualisation).
 
@@ -102,3 +102,9 @@ Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, 
 - Modale centrée sur un fond assombri, carte blanche `radius.xl`, titre + message, bouton de confirmation et « Annuler » (`ghost`).
 - Props : `visible`, `title`, `message`, `confirmLabel` (défaut « Confirmer »), `cancelLabel` (défaut « Annuler »), `variant` (`primary` → bouton noir, `danger` → bouton rouge), `onConfirm` (`() => void | Promise`), `onCancel`, `error` (message rouge géré par l'appelant), `children` (contenu additionnel, ex. un champ date).
 - Si `onConfirm` renvoie une Promise : spinner dans le bouton, garde contre les doubles appuis, fermeture (Annuler, fond, retour Android) bloquée jusqu'à la résolution. L'appelant ferme la modale (`visible=false`) en cas de succès.
+
+### ScreenHeader
+
+- Barre haute des écrans secondaires (Catégories, éditeurs…) : bouton rond retour (flèche, 48px) à gauche, titre `title` centré sur une ligne, emplacement de 48px à droite.
+- Props : `title` (requis), `onBack` (requis, ex. `router.back`), `backLabel` (défaut « Retour », accessibilité), `right` (`ReactNode`, action facultative).
+- Les écrans principaux (accueil, dettes, compte) utilisent `AppHeader` (burger + logo), pas celui-ci.

@@ -13,6 +13,8 @@ export type ListItemProps = {
   description?: string;
   // Icône (ex. <MaterialCommunityIcons color={colors.primary} />) posée sur une pastille.
   icon?: ReactNode;
+  // `none` : pas de pastille colorée derrière l'icône (l'icône a déjà son propre fond).
+  iconBackground?: 'variant' | 'none';
   // Si la fonction renvoie une Promise : spinner à la place du chevron
   // et appuis ignorés jusqu'à sa résolution.
   onPress?: () => void | Promise<unknown>;
@@ -34,6 +36,7 @@ export function ListItem({
   label,
   description,
   icon,
+  iconBackground = 'variant',
   onPress,
   variant = 'default',
   showChevron,
@@ -87,7 +90,7 @@ export function ListItem({
             borderRadius: radius.md,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: colors[v.iconBg],
+            backgroundColor: iconBackground === 'none' ? colors.transparent : colors[v.iconBg],
           }}
         >
           {icon}

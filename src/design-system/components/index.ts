@@ -7,3 +7,4 @@ export { ListItem, type ListItemProps, type ListItemVariant } from './ListItem';
 export { FormScrollView, type FormScrollViewProps } from './FormScrollView';
 export { Drawer, type DrawerProps } from './Drawer';
 export { Sheet, useSheet, type SheetProps } from './Sheet';
+export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';

@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable } from 'react-native';
 
 import { Row, Stack, Text, useTheme } from '@/design-system';
+import { CategoryIcon } from '@/features/categories/components/CategoryIcon';
 import type { Category } from '@/types/budget';
 
 type Props = {
@@ -12,7 +13,6 @@ type Props = {
 };
 
 const COLUMNS = 3;
-const ICON_TILE = 36;
 const CHECK_SIZE = 16;
 
 // Grille 3×3 des catégories (9 au maximum : pas de virtualisation).
@@ -27,7 +27,6 @@ export function CategoryGrid({ categories, value, onChange, error }: Props) {
       <Row wrap style={{ marginHorizontal: -spacing.xs }} accessibilityRole="radiogroup">
         {categories.map((c) => {
           const selected = c.id === value;
-          const icon = c.icon as keyof typeof MaterialCommunityIcons.glyphMap;
           return (
             <Stack key={c.id} style={{ width: `${100 / COLUMNS}%`, padding: spacing.xs }}>
               <Pressable
@@ -66,18 +65,11 @@ export function CategoryGrid({ categories, value, onChange, error }: Props) {
                     <MaterialCommunityIcons name="check" size={12} color={colors.textOnColor} />
                   </Stack>
                 )}
-                <Stack
-                  align="center"
-                  justify="center"
-                  style={{
-                    width: ICON_TILE,
-                    height: ICON_TILE,
-                    borderRadius: radius.md,
-                    backgroundColor: selected ? colors.overlayOnColor : c.color,
-                  }}
-                >
-                  <MaterialCommunityIcons name={icon} size={20} color={colors.textOnColor} />
-                </Stack>
+                <CategoryIcon
+                  icon={c.icon}
+                  color={selected ? colors.overlayOnColor : c.color}
+                  size="sm"
+                />
                 <Text
                   variant="bodyCompact"
                   weight="bold"

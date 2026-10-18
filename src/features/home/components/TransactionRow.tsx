@@ -1,8 +1,8 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { memo } from 'react';
 import { Pressable } from 'react-native';
 
 import { Card, Row, Stack, Text, useTheme } from '@/design-system';
+import { CategoryIcon } from '@/features/categories/components/CategoryIcon';
 import { formatAmount, formatListDate } from '@/lib/format';
 import type { Category, Transaction } from '@/types/budget';
 
@@ -12,21 +12,16 @@ type Props = {
   onPress: (id: string) => void;
 };
 
-const ICON_TILE = 48;
-
 // Ligne de la liste « Détail » (glissement pour supprimer : tâche Transaction).
 export const TransactionRow = memo(function TransactionRow({
   transaction,
   category,
   onPress,
 }: Props) {
-  const { colors, radius, motion } = useTheme();
+  const { colors, motion } = useTheme();
   const isIncome = transaction.type === 'income';
   const label = isIncome ? 'Entrée' : (category?.name ?? 'Sans catégorie');
   const title = transaction.note ?? label;
-  const icon = (
-    isIncome ? 'cash-multiple' : (category?.icon ?? 'shape-outline')
-  ) as keyof typeof MaterialCommunityIcons.glyphMap;
   const time = transaction.createdAt.slice(11, 16);
 
   return (
@@ -38,19 +33,10 @@ export const TransactionRow = memo(function TransactionRow({
     >
       <Card padding="lg" radius="xl">
         <Row gap="md">
-          <Row
-            justify="center"
-            style={{
-              width: ICON_TILE,
-              height: ICON_TILE,
-              borderRadius: radius.md,
-              backgroundColor: isIncome
-                ? colors.neutralStrong
-                : (category?.color ?? colors.textMuted),
-            }}
-          >
-            <MaterialCommunityIcons name={icon} size={24} color={colors.textOnColor} />
-          </Row>
+          <CategoryIcon
+            icon={isIncome ? 'cash-multiple' : (category?.icon ?? 'shape-outline')}
+            color={isIncome ? colors.neutralStrong : (category?.color ?? colors.textMuted)}
+          />
           <Stack flex={1} gap="xxs">
             <Text variant="heading" numberOfLines={1}>
               {title}

@@ -1,5 +1,5 @@
-import { PlaceholderScreen } from '@/features/placeholder/PlaceholderScreen';
+import { CategoriesScreen } from '@/features/categories/CategoriesScreen';
 
 export default function Screen() {
-  return <PlaceholderScreen title="Catégories" />;
+  return <CategoriesScreen />;
 }
