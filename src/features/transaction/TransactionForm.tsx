@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+
 import { useRef, useState } from 'react';
 import { Alert, Pressable } from 'react-native';
 
@@ -18,6 +18,7 @@ import { eurToDa, parseDecimal } from '@/lib/money';
 import { MOCK_EUR_RATE, mockCategories } from '@/mocks/budget';
 import type { Currency, Transaction, TransactionType } from '@/types/budget';
 
+import { closeSheet } from './closeSheet';
 import { AmountInput } from './components/AmountInput';
 import { CategoryGrid } from './components/CategoryGrid';
 import { DateField } from './components/DateField';
@@ -82,7 +83,7 @@ export function TransactionForm(props: Props) {
     if (Object.keys(next).length > 0) return;
     try {
       await simulateRequest();
-      router.back();
+      closeSheet();
     } catch {
       setErrors({ submit: "L'enregistrement a échoué. Réessaie." });
     }
@@ -94,7 +95,7 @@ export function TransactionForm(props: Props) {
     setDeleting(true);
     try {
       await simulateRequest();
-      router.back();
+      closeSheet();
     } catch {
       setErrors({ submit: 'La suppression a échoué. Réessaie.' });
     } finally {
@@ -135,7 +136,7 @@ export function TransactionForm(props: Props) {
       <Row justify="space-between">
         <Text variant="title">{title}</Text>
         <Pressable
-          onPress={() => router.back()}
+          onPress={closeSheet}
           accessibilityRole="button"
           accessibilityLabel="Fermer"
           hitSlop={spacing.sm}

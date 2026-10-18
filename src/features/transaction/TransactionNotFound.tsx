@@ -1,6 +1,6 @@
-import { router } from 'expo-router';
-
 import { Button, Stack, Text } from '@/design-system';
+
+import { closeSheet } from './closeSheet';
 
 export function TransactionNotFound() {
   return (
@@ -11,7 +11,7 @@ export function TransactionNotFound() {
       <Text variant="body" color="textSecondary" align="center">
         Elle a peut-être été supprimée.
       </Text>
-      <Button label="Fermer" variant="secondary" onPress={() => router.back()} />
+      <Button label="Fermer" variant="secondary" onPress={closeSheet} />
     </Stack>
   );
 }

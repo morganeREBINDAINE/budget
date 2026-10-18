@@ -8,20 +8,20 @@ Hiérarchie : `tokens → theme → primitives → components`. Une couche basse
 
 ## Tokens (`tokens/`)
 
-| Fichier         | Export            | Valeurs                                                                                                                                                                        |
-| --------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Fichier         | Export            | Valeurs                                                                                                                                                                                            |
+| --------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `colors.ts`     | `palette`         | slate 50–900, indigo 50/500/600/700, emerald 50/500/600/700, rose 50/500/600, yellow 300/400, orange/blue/violet/cyan/amber/fuchsia 600, `backdrop`, `whiteTranslucent`, white, black, transparent |
-|                 | `categoryColors`  | nuancier arc-en-ciel vif : `red` #EF4444, `orange` #F97316, `amber` #F59E0B, `lime` #84CC16, `green` #22C55E, `cyan` #06B6D4, `blue` #3B82F6, `violet` #8B5CF6, `pink` #EC4899 |
-|                 | `brandColors`     | logo Google officiel : `googleBlue`, `googleRed`, `googleYellow`, `googleGreen` (réservées aux logos de marque)                                                                |
-|                 | `categoryRainbow` | les mêmes couleurs en tableau, dans l'ordre du spectre (catégorie position 1 → 9)                                                                                              |
-| `spacing.ts`    | `spacing`         | none 0, xxs 2, xs 4, sm 8, md 12, lg 16, xl 20, xxl 24, xxxl 32                                                                                                                |
-|                 | `screenPadding`   | 20 (marge latérale d'écran)                                                                                                                                                    |
-|                 | `minTouchTarget`  | 48                                                                                                                                                                             |
-| `radius.ts`     | `radius`          | none 0, sm 8, md 12, lg 16, xl 24, xxl 32, full 9999                                                                                                                           |
-| `typography.ts` | `fontFamily`      | regular, medium, semibold, bold, extrabold (Plus Jakarta Sans)                                                                                                                 |
-|                 | `typography`      | `display` 32/800, `title` 18/700, `heading` 16/700, `body` 14/500, `bodySmall` 12/400, `label` 12/700 uppercase, `caption` 11/600                                              |
-| `shadows.ts`    | `shadows`         | none, xs, sm, card, soft, float, floatGreen, floatAccent (`boxShadow`)                                                                                                         |
-| `motion.ts`     | `motion`          | `duration` fast 150 / base 250 / slow 400 ; `easing` standard / decelerate / accelerate (bezier) ; `pressScale` 0.98                                                           |
+|                 | `categoryColors`  | nuancier arc-en-ciel vif : `red` #EF4444, `orange` #F97316, `amber` #F59E0B, `lime` #84CC16, `green` #22C55E, `cyan` #06B6D4, `blue` #3B82F6, `violet` #8B5CF6, `pink` #EC4899                     |
+|                 | `brandColors`     | logo Google officiel : `googleBlue`, `googleRed`, `googleYellow`, `googleGreen` (réservées aux logos de marque)                                                                                    |
+|                 | `categoryRainbow` | les mêmes couleurs en tableau, dans l'ordre du spectre (catégorie position 1 → 9)                                                                                                                  |
+| `spacing.ts`    | `spacing`         | none 0, xxs 2, xs 4, sm 8, md 12, lg 16, xl 20, xxl 24, xxxl 32                                                                                                                                    |
+|                 | `screenPadding`   | 20 (marge latérale d'écran)                                                                                                                                                                        |
+|                 | `minTouchTarget`  | 48                                                                                                                                                                                                 |
+| `radius.ts`     | `radius`          | none 0, sm 8, md 12, lg 16, xl 24, xxl 32, full 9999                                                                                                                                               |
+| `typography.ts` | `fontFamily`      | regular, medium, semibold, bold, extrabold (Plus Jakarta Sans)                                                                                                                                     |
+|                 | `typography`      | `display` 32/800, `title` 18/700, `heading` 16/700, `body` 14/500, `bodySmall` 12/400, `label` 12/700 uppercase, `caption` 11/600                                                                  |
+| `shadows.ts`    | `shadows`         | none, xs, sm, card, soft, float, floatGreen, floatAccent (`boxShadow`)                                                                                                                             |
+| `motion.ts`     | `motion`          | `duration` fast 150 / base 250 / slow 400 ; `easing` standard / decelerate / accelerate (bezier) ; `pressScale` 0.98                                                                               |
 
 Les écrans n'utilisent pas `palette` directement : passer par `useTheme().colors`.
 
