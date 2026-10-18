@@ -226,8 +226,8 @@ Reste dû = `debts.amount_da − Σ debt_repayments.amount_da`. Reste = 0 → de
 
 Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défaut + ~20 transactions sur 2–3 mois). Aucune base, aucun réseau.
 
-- [ ] Composants partagés : `AppHeader`, `MonthSelector`, `TotalCard`, `CategoryChart`, `TransactionRow` (avec glissement), `FabGroup`, `AmountInput`, `CurrencyToggle`, `DateField`, `CategoryPicker`, `ColorPicker`, `IconPicker`, `SyncStatusCard`, `EmptyState`, `ConfirmDialog`, `DuePaymentBanner` (encart rouge + bouton « J'ai payé »), `DayOfMonthPicker`, `Fab`, `SegmentedControl`, `Switch`, `Avatar`, `FormSectionList`, `EurRateField`.
-- [ ] Formatage (`src/lib/format.ts` fait pour l'accueil) : montants `12 500 DA` (séparateur d'espace), mois en français (« Octobre 2026 »), dates de la liste.
+- [x] Composants partagés : `AppHeader`, `MonthSelector`, `TotalCard`, `CategoryChart`, `TransactionRow` (avec glissement), `FabGroup`, `AmountInput`, `CurrencyToggle` (intégré à `AmountInput`), `DateField`, `CategoryPicker` (`CategoryGrid`), `ColorPicker`, `IconPicker`, `SyncStatusCard`, `EmptyState`, `ConfirmDialog`, `DuePaymentBanner` (encart rouge + bouton « J'ai payé »), `DayOfMonthPicker`, `Fab`, `SegmentedControl`, `Switch`, `Avatar`, `FormSectionList`, `EurRateField`.
+- [x] Formatage (`src/lib/format.ts` fait pour l'accueil) : montants `12 500 DA` (séparateur d'espace), mois en français (« Octobre 2026 »), dates de la liste.
 - [x] **Connexion** : logo + bouton Google officiel (session factice : l'appui mène à l'accueil).
 - [x] **Accueil** : barre haute (logo + export, pas d'avatar), mois ‹ ›, cartes Entrées / Dépenses, graphique identique au design, section « Détail », boutons flottants, état vide pour un mois sans transaction, glissement ← → pour changer de mois (en-tête et sélecteur fixes, carrousel : mois voisins visibles pendant le glissement).
 - [x] **Transaction** : feuille aux 2/3 (`Sheet`, fermeture par la croix ou le fond grisé, pas au glissement) (maquette `./assets/maquettes/transaction/code.html`), formulaire entrée / dépense, appui sur « DA » → « € » puis champ « Taux du jour » et aperçu indicatif en DA, date (sélecteur natif), catégorie en grille 3×3 (dépense), note ; bouton noir ; mode modification (appui sur une ligne) avec Supprimer.
@@ -242,8 +242,9 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 
 ## Phase 3 — Données locales (hors ligne)
 
+> Ordre d’exécution : après le schéma, réaliser les phases 4 (Supabase) et 5 (Auth Google), puis reprendre la suite de cette phase avec le `user_id` du compte connecté.
+
 - [x] Schéma Drizzle complet (`categories`, `transactions`, `recurring_payments`, `recurring_occurrences`, `debt_people`, `debts`, `debt_repayments`, `sync_queue`, `settings` par utilisateur) avec contraintes CHECK et index, migration initiale (`npm run db:generate`), migrations au démarrage (`DatabaseProvider`, splash maintenu, écran d'erreur « Réessayer »), Drizzle Studio en dev. Pas de clés étrangères SQL (ordre d'insertion libre pour le pull et l'import).
-- [ ] Seed des 9 catégories au premier lancement (`settings.seeded`).
 - [ ] Repositories : transactions du mois triées par date desc puis `created_at` desc, totaux du mois, totaux par catégorie, CRUD transactions, mise à jour de catégorie, catégorie utilisée → suppression interdite.
 - [ ] `lib/money.ts` : conversion EUR → DA, arrondi, parsing des saisies.
 - [ ] Remplacer les mocks par les données SQLite (requêtes réactives `useLiveQuery`).
@@ -268,7 +269,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [ ] Google Cloud : client OAuth Android (SHA-1 debug + EAS) et client Web ; activer le provider Google dans Supabase.
 - [ ] Connexion → ID token → `signInWithIdToken`.
 - [ ] Garde de route : pas de session → `/login` ; session présente (même hors ligne) → accueil.
-- [ ] Rattacher `user_id` aux données locales à la première connexion.
+- [ ] Rattacher `user_id` aux données locales à la première connexion : seed des 9 catégories par défaut (ids aléatoires) si `settings.seeded` absent pour ce `user_id`, dans une transaction avec `sync_queue`.
 - [ ] Déconnexion : avertir s'il reste des éléments non synchronisés.
 
 ## Phase 6 — Synchronisation
