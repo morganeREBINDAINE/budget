@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { FlatList, type ListRenderItem } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -27,9 +28,18 @@ export function HomeScreen() {
   const shift = useCallback((delta: 1 | -1) => setMonth((m) => shiftMonth(m, delta)), []);
   const swipe = useMonthSwipe(month, shift);
 
-  // TODO(phase 2, tâche Transaction) : ouvrir /transaction/new?type=…
-  const addIncome = useCallback(() => {}, []);
-  const addExpense = useCallback(() => {}, []);
+  const addIncome = useCallback(
+    () => router.push({ pathname: '/transaction/new', params: { type: 'income' } }),
+    [],
+  );
+  const addExpense = useCallback(
+    () => router.push({ pathname: '/transaction/new', params: { type: 'expense' } }),
+    [],
+  );
+  const openTransaction = useCallback(
+    (id: string) => router.push({ pathname: '/transaction/[id]', params: { id } }),
+    [],
+  );
   // TODO(phase 7) : export JSON.
   const exportData = useCallback(() => {}, []);
 
@@ -38,9 +48,10 @@ export function HomeScreen() {
       <TransactionRow
         transaction={item}
         category={item.categoryId ? summary.categoriesById.get(item.categoryId) : undefined}
+        onPress={openTransaction}
       />
     ),
-    [summary.categoriesById],
+    [summary.categoriesById, openTransaction],
   );
 
   const header = (

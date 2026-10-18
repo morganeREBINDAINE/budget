@@ -10,7 +10,7 @@ Hiérarchie : `tokens → theme → primitives → components`. Une couche basse
 
 | Fichier         | Export            | Valeurs                                                                                                                                                                        |
 | --------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `colors.ts`     | `palette`         | slate 50–900, indigo 50/500/600/700, emerald 50/500/600/700, rose 50/500/600, yellow 300/400, orange/blue/violet/cyan/amber/fuchsia 600, `backdrop`, white, black, transparent |
+| `colors.ts`     | `palette`         | slate 50–900, indigo 50/500/600/700, emerald 50/500/600/700, rose 50/500/600, yellow 300/400, orange/blue/violet/cyan/amber/fuchsia 600, `backdrop`, `whiteTranslucent`, white, black, transparent |
 |                 | `categoryColors`  | nuancier arc-en-ciel vif : `red` #EF4444, `orange` #F97316, `amber` #F59E0B, `lime` #84CC16, `green` #22C55E, `cyan` #06B6D4, `blue` #3B82F6, `violet` #8B5CF6, `pink` #EC4899 |
 |                 | `brandColors`     | logo Google officiel : `googleBlue`, `googleRed`, `googleYellow`, `googleGreen` (réservées aux logos de marque)                                                                |
 |                 | `categoryRainbow` | les mêmes couleurs en tableau, dans l'ordre du spectre (catégorie position 1 → 9)                                                                                              |
@@ -32,7 +32,7 @@ Les écrans n'utilisent pas `palette` directement : passer par `useTheme().color
 - `ThemeProvider` (`scheme?: 'light' | 'dark'`, défaut `light`) : monté dans `src/app/_layout.tsx`.
 - `useTheme()` : renvoie le thème courant.
 
-Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, `border`, `borderSubtle`, `backdrop`, `text`, `textStrong`, `textSecondary`, `textMuted`, `textOnColor`, `primary`, `primarySoft`, `onPrimary`, `success`, `successStrong`, `successSoft`, `accent`, `accentPressed`, `danger`, `dangerSoft`, `neutralStrong`, `neutralStrongPressed`, `transparent`.
+Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, `border`, `borderSubtle`, `backdrop`, `overlayOnColor` (voile blanc 20 % sur fond coloré), `text`, `textStrong`, `textSecondary`, `textMuted`, `textOnColor`, `primary`, `primarySoft`, `onPrimary`, `success`, `successStrong`, `successSoft`, `accent`, `accentPressed`, `danger`, `dangerSoft`, `neutralStrong`, `neutralStrongPressed`, `transparent`.
 
 ## Primitives (`primitives/`)
 
@@ -47,7 +47,7 @@ Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, 
 
 ### Button
 
-- `variant` : `primary` (vert emerald, CTA), `secondary` (slate-900), `outline` (blanc + bordure), `ghost` (transparent).
+- `variant` : `primary` (vert emerald, CTA), `secondary` (slate-900), `outline` (blanc + bordure), `ghost` (transparent), `danger` (fond rose clair, texte rouge : suppression).
 - `size` : `sm` (40px + hitSlop), `md` (48px, défaut), `lg` (56px).
 - Props : `label` (requis), `onPress` (`() => void | Promise`), `loading`, `disabled`, `fullWidth`, `leftIcon`, `rightIcon`, `style`.
 - États : pressed (fond plus foncé + scale 0.98), disabled (opacité 0.5), loading (spinner).
@@ -62,9 +62,15 @@ Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, 
 
 - Props : `label` (libellé uppercase), `hint`, `error` (bordure rouge + message), `disabled`, `leftIcon`, `rightIcon`, plus les props de `TextInput`.
 - États : focus (bordure `primary`), error, disabled. Hauteur min. 48px.
-- Dans un écran, le placer dans `FormScrollView` (à créer).
+- Dans un écran, le placer dans `FormScrollView`.
 
 ### Badge
 
 - `variant` : `neutral` (défaut), `primary`, `success`, `danger`.
 - Props : `label`, `icon`. Pastille pilule en `caption` gras.
+
+### FormScrollView
+
+- `KeyboardAwareScrollView` (react-native-keyboard-controller) : le champ en cours de saisie reste visible au-dessus du clavier.
+- Défauts : `bottomOffset` = `spacing.xxl`, `keyboardShouldPersistTaps="handled"`, sans indicateur de défilement. Accepte toutes les props de `ScrollView`.
+- Nécessite `KeyboardProvider` (monté dans `src/app/_layout.tsx`).

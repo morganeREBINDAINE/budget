@@ -1,5 +1,12 @@
-import { PlaceholderScreen } from '@/features/placeholder/PlaceholderScreen';
+import { useLocalSearchParams } from 'expo-router';
+
+import { TransactionForm } from '@/features/transaction/TransactionForm';
+import { TransactionNotFound } from '@/features/transaction/TransactionNotFound';
+import { mockTransactions } from '@/mocks/budget';
 
 export default function Screen() {
-  return <PlaceholderScreen title="Modifier la transaction" />;
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const transaction = mockTransactions.find((t) => t.id === id);
+  if (!transaction) return <TransactionNotFound />;
+  return <TransactionForm mode="edit" transaction={transaction} />;
 }

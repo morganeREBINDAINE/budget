@@ -13,6 +13,8 @@ const colors = {
   border: palette.slate200,
   borderSubtle: palette.slate100,
   backdrop: palette.backdrop,
+  // Voile clair posé sur un fond coloré (pastille d'icône d'une tuile sélectionnée).
+  overlayOnColor: palette.whiteTranslucent,
 
   text: palette.slate900,
   textStrong: palette.slate800,

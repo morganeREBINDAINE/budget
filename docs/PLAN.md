@@ -179,7 +179,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [ ] Formatage (`src/lib/format.ts` fait pour l'accueil) : montants `12 500 DA` (séparateur d'espace), mois en français (« Octobre 2026 »), dates de la liste.
 - [x] **Connexion** : logo + bouton Google officiel (session factice : l'appui mène à l'accueil).
 - [x] **Accueil** : barre haute (logo + export, pas d'avatar), mois ‹ ›, cartes Entrées / Dépenses, graphique identique au design, section « Détail », boutons flottants, état vide pour un mois sans transaction, glissement ← → sur la page pour changer de mois.
-- [ ] **Transaction** : formulaire entrée / dépense, bascule DA ↔ EUR avec champ taux et aperçu du montant en DA, date, catégorie (dépense), note ; mode modification avec Supprimer.
+- [x] **Transaction** : feuille native aux 2/3 (maquette `./assets/maquettes/transaction/code.html`), formulaire entrée / dépense, appui sur « DA » → « € » puis champ « Taux du jour » et aperçu indicatif en DA, date (sélecteur natif), catégorie en grille 3×3 (dépense), note ; bouton noir ; mode modification (appui sur une ligne) avec Supprimer.
 - [ ] **Compte** : profil, carte d'état de synchro (afficher les 4 états avec des valeurs factices), Catégories, Exporter, Importer, Déconnexion.
 - [ ] **Catégories** + **Éditeur** : liste des 9, nom, couleur, icône.
 - [ ] **Paiements réguliers** + **Éditeur** : liste, formulaire ; encarts rouges factices sur l'accueil (un dû aujourd'hui, un en retard), modale de confirmation « J'ai payé ».

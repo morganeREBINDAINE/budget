@@ -1,0 +1,298 @@
+<!DOCTYPE html><html class="h-full bg-slate-100" lang="fr" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<title>Budget - Suivi &amp; Dépenses</title>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind Custom Config -->
+<script data-purpose="tailwind-config" id="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              primary: '#4338CA',
+              blue: '#3B82F6',
+              mint: '#10B981',
+              amber: '#F59E0B',
+              coral: '#F97316',
+              cyan: '#06B6D4',
+              rose: '#EC4899',
+              violet: '#8B5CF6',
+              gray: '#94A3B8'
+            }
+          },
+          boxShadow: {
+            'soft': '0 8px 30px rgba(0, 0, 0, 0.04)',
+            'card': '0 4px 20px -2px rgba(15, 23, 42, 0.05)',
+            'float': '0 12px 36px -4px rgba(79, 70, 229, 0.35)',
+            'float-green': '0 10px 25px -3px rgba(16, 185, 129, 0.3)',
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom CSS for Donut Chart & Tabular Numbers -->
+<style data-purpose="layout-and-charts">
+    /* Tabular figures for aligned prices */
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    
+    /* Segmented Circular Ring via Conic Gradient */
+    .donut-chart-segment {
+      background: conic-gradient(
+        #4338CA 0% 47%,
+        #10B981 47% 68%,
+        #F59E0B 68% 81%,
+        #F97316 81% 90%,
+        #06B6D4 90% 96%,
+        #CBD5E1 96% 100%
+      );
+    }
+
+    /* iOS safe areas and hide scrollbars */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<meta content="mobile_stack" name="shell-type"></head>
+<body class="h-full bg-slate-100 flex justify-center items-start text-slate-800 antialiased font-sans sm:py-6">
+<!-- BEGIN: MobileDeviceFrame -->
+<div class="relative w-full max-w-[420px] bg-[#F8FAFC] min-h-screen sm:min-h-[880px] sm:max-h-[920px] sm:rounded-[48px] shadow-2xl flex flex-col overflow-hidden border border-slate-200/60 pb-28">
+<!-- BEGIN: TopStatusBar -->
+<!-- iPhone standard notch bar container -->
+<header class="pt-3 px-7 flex justify-between items-center text-xs font-semibold select-none z-20">
+<span class="text-slate-900 tracking-tight font-bold text-sm">9:41</span>
+<!-- Dynamic Island Simulator -->
+<div class="w-24 h-5 bg-black rounded-full mx-auto -mt-1 hidden sm:block"></div>
+<div class="flex items-center space-x-1.5 text-slate-900">
+<!-- Cellular Signal Icon -->
+<svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+<path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.2.2-.2.51 0 .71.2.2.51.2.71 0l1.83-1.83C8.42 19.39 10.13 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"></path>
+</svg>
+<!-- Wifi Icon -->
+<svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+<path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98A17.88 17.88 0 0 0 12 4z"></path>
+</svg>
+<!-- Battery Icon -->
+<div class="w-5 h-2.5 border border-slate-800 rounded-sm p-0.5 flex items-center">
+<div class="h-full w-3.5 bg-slate-800 rounded-2xs"></div>
+</div>
+</div>
+</header>
+<!-- END: TopStatusBar -->
+<!-- BEGIN: MainHeader -->
+<!-- Brand Title and Export Action (No Hamburger Menu) -->
+<div class="px-5 pt-3 pb-2 flex items-center justify-between" data-purpose="app-header">
+<div class="w-9 h-9"></div> <!-- Spacer to keep centered title balanced -->
+<!-- Brand & Name -->
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-primary to-indigo-500 flex items-center justify-center text-white shadow-sm">
+<svg class="w-4 h-4 stroke-current stroke-2 fill-none" viewBox="0 0 24 24">
+<path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="text-lg font-bold tracking-tight text-slate-900">Budget</span>
+</div>
+<!-- Export / Download Action Button -->
+<button aria-label="Exporter les données" class="w-9 h-9 rounded-full bg-white border border-slate-200/80 shadow-sm flex items-center justify-center text-slate-700 hover:bg-slate-50 active:scale-95 transition-all" type="button">
+<svg class="w-4 h-4 stroke-[2.2] stroke-current fill-none" viewBox="0 0 24 24">
+<path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M7.5 12L12 16.5m0 0L16.5 12M12 16.5V3" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<!-- END: MainHeader -->
+<!-- Scrollable Content View -->
+<main class="flex-1 overflow-y-auto px-5 pt-2 pb-6 no-scrollbar space-y-4"><div class="flex flex-col w-full relative -mx-5 -my-2 overflow-hidden select-none">
+<!-- BACKGROUND CONTEXT (Simulated Screen Behind Dimmed Overlay) -->
+<div class="px-5 pt-2 pb-10 filter blur-[2px] opacity-40 pointer-events-none transform scale-[0.98] transition-transform origin-top space-y-4">
+<!-- Mini Metric Cards Behind -->
+<div class="bg-white rounded-3xl p-5 shadow-sm space-y-3">
+<div class="flex justify-between items-center">
+<span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Solde Total</span>
+<span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">+14.2%</span>
+</div>
+<div class="text-2xl font-extrabold text-slate-900 tracking-tight">48 000 <span class="text-base font-semibold text-slate-500">DA</span></div>
+</div>
+<!-- Mini Donut Section Simulated -->
+<div class="bg-white rounded-3xl p-5 shadow-sm flex items-center justify-center h-44">
+<div class="w-32 h-32 rounded-full border-8 border-indigo-600/20 border-t-indigo-600"></div>
+</div>
+</div>
+<!-- BACKDROP OVERLAY -->
+<div class="absolute inset-0 bg-slate-950/60 backdrop-blur-[3px] z-10 transition-opacity"></div>
+<!-- BOTTOM SHEET MODAL CONTAINER -->
+<div class="relative z-20 mt-auto pt-2">
+<div class="bg-white rounded-t-[36px] shadow-2xl px-5 pt-3 pb-8 flex flex-col space-y-4 animate-in slide-in-from-bottom-8 duration-300">
+<!-- DRAG HANDLE -->
+<div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-1"></div>
+<!-- HEADER ROW: Switcher / Title & Close Button -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl">
+
+
+</div>
+<button aria-label="Fermer la fenêtre" class="w-8 h-8 rounded-full bg-slate-100 active:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors" type="button">
+<span class="material-symbols-outlined text-[19px] leading-none">close</span>
+</button>
+</div>
+<!-- AMOUNT INPUT SECTION -->
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block" for="expense-amount">Montant</label>
+<div class="relative flex items-baseline bg-slate-50 rounded-2xl px-4 py-3 focus-within:bg-indigo-50/40 transition-colors">
+<input class="w-full bg-transparent p-0 text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums focus:outline-none focus:ring-0 border-0" id="expense-amount" placeholder="0" type="number" value="15300">
+<span class="text-lg font-bold text-slate-500 pl-2 select-none">DA</span>
+</div>
+</div>
+<!-- DATE & NOTE DUAL ROW -->
+<div class="grid grid-cols-2 gap-3">
+<!-- Date Selector -->
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Date</label>
+<div class="h-11 bg-slate-50 rounded-2xl px-3 flex items-center gap-2 cursor-pointer hover:bg-slate-100 transition-colors">
+<span class="material-symbols-outlined text-slate-500 text-lg">calendar_today</span>
+<span class="text-xs font-bold text-slate-800 truncate">26/03/2025</span>
+</div>
+</div>
+<!-- Description Note -->
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block" for="expense-desc">Note (optionnel)</label>
+<div class="h-11 bg-slate-50 rounded-2xl px-3 flex items-center">
+<input class="w-full bg-transparent p-0 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none border-0 truncate" id="expense-desc" placeholder="Ex: Taxi, Courses..." type="text" value="Taxi trajet aéroport">
+</div>
+</div>
+</div>
+<!-- CATEGORY SELECTION SECTION (3x3 Grid) -->
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Sélectionner une catégorie</label>
+
+</div>
+<div class="grid grid-cols-3 gap-2.5" id="category-grid"><!-- 1. Alimentation -->
+<button class="group relative flex flex-col items-center justify-center p-2.5 aspect-square rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:bg-slate-50 active:scale-95 transition-all text-left" type="button">
+<div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-lg mb-1 group-hover:scale-110 transition-transform shadow-sm">
+<span class="leading-none select-none">🛒</span>
+</div>
+<span class="text-[11px] font-bold text-slate-800 tracking-tight truncate w-full text-center">Alimentation</span>
+</button>
+<!-- 2. Restaurants -->
+<button class="group relative flex flex-col items-center justify-center p-2.5 aspect-square rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:bg-slate-50 active:scale-95 transition-all text-left" type="button">
+<div class="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center text-lg mb-1 group-hover:scale-110 transition-transform shadow-sm">
+<span class="leading-none select-none">🍽️</span>
+</div>
+<span class="text-[11px] font-bold text-slate-800 tracking-tight truncate w-full text-center">Restaurants</span>
+</button>
+<!-- 3. Abonnements -->
+<button class="group relative flex flex-col items-center justify-center p-2.5 aspect-square rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:bg-slate-50 active:scale-95 transition-all text-left" type="button">
+<div class="w-9 h-9 rounded-xl bg-amber-600 flex items-center justify-center text-lg mb-1 group-hover:scale-110 transition-transform shadow-sm">
+<span class="leading-none select-none">📱</span>
+</div>
+<span class="text-[11px] font-bold text-slate-800 tracking-tight truncate w-full text-center">Abonnements</span>
+</button>
+<!-- 4. Éducation -->
+<button class="group relative flex flex-col items-center justify-center p-2.5 aspect-square rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:bg-slate-50 active:scale-95 transition-all text-left" type="button">
+<div class="w-9 h-9 rounded-xl bg-orange-600 flex items-center justify-center text-lg mb-1 group-hover:scale-110 transition-transform shadow-sm">
+<span class="leading-none select-none">🎓</span>
+</div>
+<span class="text-[11px] font-bold text-slate-800 tracking-tight truncate w-full text-center">Éducation</span>
+</button>
+<!-- 5. Transport (ACTIVE STATE) -->
+<button class="relative flex flex-col items-center justify-center p-2.5 aspect-square rounded-2xl bg-cyan-600 text-white shadow-md shadow-cyan-500/25 active:scale-95 transition-all scale-[1.02] border border-cyan-600" type="button">
+<div class="absolute top-1.5 right-1.5 w-4 h-4 bg-white/20 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[12px] font-black">check</span>
+</div>
+<div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-lg mb-1 shadow-sm">
+<span class="leading-none select-none">🚗</span>
+</div>
+<span class="text-[11px] font-bold text-white tracking-tight truncate w-full text-center">Transport</span>
+</button>
+<!-- 6. Santé -->
+<button class="group relative flex flex-col items-center justify-center p-2.5 aspect-square rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:bg-slate-50 active:scale-95 transition-all text-left" type="button">
+<div class="w-9 h-9 rounded-xl bg-pink-600 flex items-center justify-center text-lg mb-1 group-hover:scale-110 transition-transform shadow-sm">
+<span class="leading-none select-none">💊</span>
+</div>
+<span class="text-[11px] font-bold text-slate-800 tracking-tight truncate w-full text-center">Santé</span>
+</button>
+<!-- 7. Factures -->
+<button class="group relative flex flex-col items-center justify-center p-2.5 aspect-square rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:bg-slate-50 active:scale-95 transition-all text-left" type="button">
+<div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-lg mb-1 group-hover:scale-110 transition-transform shadow-sm">
+<span class="leading-none select-none">🧾</span>
+</div>
+<span class="text-[11px] font-bold text-slate-800 tracking-tight truncate w-full text-center">Factures</span>
+</button>
+<!-- 8. Loisirs -->
+<button class="group relative flex flex-col items-center justify-center p-2.5 aspect-square rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:bg-slate-50 active:scale-95 transition-all text-left" type="button">
+<div class="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center text-lg mb-1 group-hover:scale-110 transition-transform shadow-sm">
+<span class="leading-none select-none">🎮</span>
+</div>
+<span class="text-[11px] font-bold text-slate-800 tracking-tight truncate w-full text-center">Loisirs</span>
+</button>
+<!-- 9. Autre -->
+<button class="group relative flex flex-col items-center justify-center p-2.5 aspect-square rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:bg-slate-50 active:scale-95 transition-all text-left" type="button">
+<div class="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-lg mb-1 group-hover:scale-110 transition-transform shadow-sm">
+<span class="leading-none select-none">📦</span>
+</div>
+<span class="text-[11px] font-bold text-slate-800 tracking-tight truncate w-full text-center">Autre</span>
+</button></div>
+</div>
+<!-- MAIN SUBMISSION BUTTON -->
+<div class="pt-2">
+<button class="w-full h-13 py-3.5 px-4 bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] transition-all rounded-2xl shadow-float-green flex items-center justify-center gap-2.5 text-white font-extrabold text-sm tracking-tight" type="button">
+
+<span class="">Ajouter la dépense</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Interactive micro-behavior for the 3x3 category grid selection
+  document.addEventListener('DOMContentLoaded', () => {
+    const grid = document.getElementById('category-grid');
+    if (!grid) return;
+    
+    const buttons = grid.querySelectorAll('button');
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        // Simple visual toggle highlight for demo responsiveness
+        buttons.forEach(b => {
+          b.classList.remove('scale-[1.02]');
+        });
+        btn.classList.add('scale-[1.02]');
+      });
+    });
+  });
+</script></main>
+<!-- BEGIN: FloatingActionButtons -->
+<!-- Two floating action buttons at screen bottom (No bottom navigation bar) -->
+<div class="absolute bottom-5 inset-x-0 px-5 flex items-center gap-3 z-30" data-purpose="bottom-action-buttons">
+<!-- Button: Ajouter Entrée -->
+
+<!-- Button: Ajouter Dépense -->
+
+</div>
+<!-- END: FloatingActionButtons -->
+<!-- BEGIN: iOSHomeIndicator -->
+<div class="absolute bottom-1.5 inset-x-0 flex justify-center pointer-events-none">
+<div class="w-32 h-1 bg-slate-900/20 rounded-full"></div>
+</div>
+<!-- END: iOSHomeIndicator -->
+</div>
+<!-- END: MobileDeviceFrame -->
+
+
+</body></html>

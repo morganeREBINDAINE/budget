@@ -15,6 +15,9 @@ export type Transaction = {
   type: TransactionType;
   amountDa: number;
   currency: Currency;
+  // Montant EUR saisi (centimes) et taux DA/EUR appliqué, si currency = EUR.
+  originalAmountCents: number | null;
+  eurRate: number | null;
   categoryId: string | null;
   note: string | null;
   // YYYY-MM-DD

@@ -51,7 +51,7 @@ export function isInMonth(date: string, { year, month }: YearMonth): boolean {
   return date.startsWith(`${year}-${String(month).padStart(2, '0')}`);
 }
 
-const toIsoDate = (d: Date) =>
+export const toIsoDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 // Date de la liste « Détail » : « Aujourd'hui », « Hier » ou « 18 mars ».
@@ -62,4 +62,16 @@ export function formatListDate(date: string, now = new Date()): string {
   if (date === toIsoDate(yesterday)) return 'Hier';
   const [, m, d] = date.split('-').map(Number);
   return `${d} ${MONTHS[m - 1]}`;
+}
+
+// "2026-03-26" → "26/03/2026".
+export function formatShortDate(date: string): string {
+  const [y, m, d] = date.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+// "2026-03-26" → Date locale (minuit).
+export function parseIsoDate(date: string): Date {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(y, m - 1, d);
 }

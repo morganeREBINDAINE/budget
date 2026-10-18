@@ -11,6 +11,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { ThemeProvider, useTheme } from '@/design-system';
 import { MockSessionProvider, useSession } from '@/features/auth/MockSession';
@@ -34,11 +35,13 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider>
-        <MockSessionProvider>
-          <RootStack />
-        </MockSessionProvider>
-      </ThemeProvider>
+      <KeyboardProvider>
+        <ThemeProvider>
+          <MockSessionProvider>
+            <RootStack />
+          </MockSessionProvider>
+        </ThemeProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

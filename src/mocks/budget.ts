@@ -62,6 +62,9 @@ const isoDaysAgo = (days: number) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+// Dernier taux DA/EUR utilisé (préremplit le champ « Taux du jour »).
+export const MOCK_EUR_RATE = 250;
+
 let seq = 0;
 const tx = (
   type: Transaction['type'],
@@ -79,6 +82,8 @@ const tx = (
     type,
     amountDa,
     currency,
+    originalAmountCents: currency === 'EUR' ? Math.round((amountDa / MOCK_EUR_RATE) * 100) : null,
+    eurRate: currency === 'EUR' ? MOCK_EUR_RATE : null,
     categoryId,
     note,
     date,

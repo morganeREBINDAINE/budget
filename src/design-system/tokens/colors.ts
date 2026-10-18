@@ -41,6 +41,7 @@ export const palette = {
   fuchsia600: '#C026D3',
 
   backdrop: 'rgba(15, 23, 42, 0.65)',
+  whiteTranslucent: 'rgba(255, 255, 255, 0.2)',
 } as const;
 
 // Couleurs des catégories : nuancier arc-en-ciel vif, dans l'ordre du spectre.

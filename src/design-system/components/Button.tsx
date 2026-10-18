@@ -13,7 +13,7 @@ import type { Theme, ThemeColor } from '../theme/light';
 import { useTheme } from '../theme/ThemeProvider';
 import { minTouchTarget } from '../tokens/spacing';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 export type ButtonProps = Omit<PressableProps, 'onPress' | 'children' | 'style'> & {
@@ -38,6 +38,7 @@ const variants: Record<ButtonVariant, VariantStyle> = {
   secondary: { bg: 'neutralStrong', bgPressed: 'neutralStrongPressed', fg: 'textOnColor' },
   outline: { bg: 'surface', bgPressed: 'background', fg: 'textStrong', border: 'border' },
   ghost: { bg: 'transparent', bgPressed: 'surfaceMuted', fg: 'textStrong' },
+  danger: { bg: 'dangerSoft', bgPressed: 'dangerSoft', fg: 'danger' },
 };
 
 const sizes = (theme: Theme) =>
