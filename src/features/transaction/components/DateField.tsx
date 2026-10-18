@@ -10,10 +10,12 @@ type Props = {
   // YYYY-MM-DD
   value: string;
   onChange: (value: string) => void;
+  label?: string;
+  hint?: string;
 };
 
 // Champ « Date » : ouvre le sélecteur natif (dialogue sur Android, calendrier en ligne sur iOS).
-export function DateField({ value, onChange }: Props) {
+export function DateField({ value, onChange, label = 'Date', hint }: Props) {
   const { colors, radius, spacing } = useTheme();
   const [iosOpen, setIosOpen] = useState(false);
   const date = parseIsoDate(value);
@@ -35,12 +37,12 @@ export function DateField({ value, onChange }: Props) {
   return (
     <Stack gap="xs">
       <Text variant="label" color="textSecondary">
-        Date
+        {label}
       </Text>
       <Pressable
         onPress={open}
         accessibilityRole="button"
-        accessibilityLabel={`Date, ${formatShortDate(value)}`}
+        accessibilityLabel={`${label}, ${formatShortDate(value)}`}
         style={({ pressed }) => ({
           minHeight: minTouchTarget,
           borderRadius: radius.md,
@@ -62,6 +64,11 @@ export function DateField({ value, onChange }: Props) {
           </Text>
         </Row>
       </Pressable>
+      {hint ? (
+        <Text variant="bodySmall" color="textSecondary">
+          {hint}
+        </Text>
+      ) : null}
       {Platform.OS === 'ios' && iosOpen && (
         <DateTimePicker
           value={date}

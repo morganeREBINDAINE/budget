@@ -4,7 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { screenPadding, Stack, useTheme } from '@/design-system';
 import { AppHeader } from '@/features/navigation/AppHeader';
+import { PayDueDialog } from '@/features/recurring/components/PayDueDialog';
 import { currentYearMonth, shiftMonth, type YearMonth } from '@/lib/format';
+import { mockDuePayments } from '@/mocks/recurring';
+import type { DuePayment } from '@/types/budget';
 
 import { FabGroup } from './components/FabGroup';
 import { MonthPager } from './components/MonthPager';
@@ -14,6 +17,9 @@ import { MonthPage } from './MonthPage';
 export function HomeScreen() {
   const { colors } = useTheme();
   const [month, setMonth] = useState(currentYearMonth);
+  // TODO(phase 3) : échéances dues calculées par lib/recurring.ts.
+  const [duePayments, setDuePayments] = useState<DuePayment[]>(mockDuePayments);
+  const [paying, setPaying] = useState<DuePayment | null>(null);
 
   const addIncome = useCallback(
     () => router.push({ pathname: '/transaction/new', params: { type: 'income' } }),
@@ -30,9 +36,23 @@ export function HomeScreen() {
   // TODO(phase 7) : export JSON.
   const exportData = useCallback(() => {}, []);
 
+  const markPaid = useCallback((paid: DuePayment) => {
+    setDuePayments((list) =>
+      list.filter((d) => !(d.payment.id === paid.payment.id && d.dueDate === paid.dueDate)),
+    );
+    setPaying(null);
+  }, []);
+
   const renderPage = useCallback(
-    (m: YearMonth) => <MonthPage month={m} onOpenTransaction={openTransaction} />,
-    [openTransaction],
+    (m: YearMonth) => (
+      <MonthPage
+        month={m}
+        duePayments={duePayments}
+        onPayDue={setPaying}
+        onOpenTransaction={openTransaction}
+      />
+    ),
+    [duePayments, openTransaction],
   );
 
   return (
@@ -48,6 +68,12 @@ export function HomeScreen() {
       </Stack>
       <MonthPager month={month} onChange={setMonth} renderPage={renderPage} />
       <FabGroup onAddIncome={addIncome} onAddExpense={addExpense} />
+      <PayDueDialog
+        key={paying ? `${paying.payment.id}-${paying.dueDate}` : 'closed'}
+        due={paying}
+        onCancel={() => setPaying(null)}
+        onPaid={markPaid}
+      />
     </SafeAreaView>
   );
 }

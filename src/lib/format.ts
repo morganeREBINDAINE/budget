@@ -93,3 +93,39 @@ export function initials(name: string): string {
     .map((part) => part.charAt(0).toUpperCase())
     .join('');
 }
+
+const MONTHS_SHORT = [
+  'janv.',
+  'févr.',
+  'mars',
+  'avr.',
+  'mai',
+  'juin',
+  'juil.',
+  'août',
+  'sept.',
+  'oct.',
+  'nov.',
+  'déc.',
+];
+
+// 3 → « mars » ; short : 1 → « janv. ».
+export function monthName(month: number, options: { short?: boolean } = {}): string {
+  return (options.short ? MONTHS_SHORT : MONTHS)[month - 1];
+}
+
+// "2026-11-05" → « 5 novembre 2026 ».
+export function formatLongDate(date: string): string {
+  const [y, m, d] = date.split('-').map(Number);
+  return `${d} ${MONTHS[m - 1]} ${y}`;
+}
+
+// Nombre de jours de `from` à `to` (dates YYYY-MM-DD), négatif si `to` est avant.
+export function daysBetween(from: string, to: string): number {
+  return Math.round((parseIsoDate(to).getTime() - parseIsoDate(from).getTime()) / 86_400_000);
+}
+
+// 1 → « en retard de 1 jour », 3 → « en retard de 3 jours ».
+export function formatLateness(days: number): string {
+  return `en retard de ${days} jour${days > 1 ? 's' : ''}`;
+}

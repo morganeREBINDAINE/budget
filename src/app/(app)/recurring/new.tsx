@@ -1,5 +1,5 @@
-import { PlaceholderScreen } from '@/features/placeholder/PlaceholderScreen';
+import { RecurringEditorScreen } from '@/features/recurring/RecurringEditorScreen';
 
 export default function Screen() {
-  return <PlaceholderScreen title="Nouveau paiement" />;
+  return <RecurringEditorScreen mode="new" />;
 }

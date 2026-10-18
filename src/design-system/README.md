@@ -108,3 +108,22 @@ Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, 
 - Barre haute des écrans secondaires (Catégories, éditeurs…) : bouton rond retour (flèche, 48px) à gauche, titre `title` centré sur une ligne, emplacement de 48px à droite.
 - Props : `title` (requis), `onBack` (requis, ex. `router.back`), `backLabel` (défaut « Retour », accessibilité), `right` (`ReactNode`, action facultative).
 - Les écrans principaux (accueil, dettes, compte) utilisent `AppHeader` (burger + logo), pas celui-ci.
+
+### Fab
+
+- Bouton rond flottant de 64px, icône seule (Material Community Icons, 32px).
+- `variant` : `neutral` (slate-900, ombre `sm`, défaut), `accent` (jaune, ombre `floatAccent`).
+- Props : `icon` (requis), `label` (requis, accessibilité), `onPress`, `variant`, `style` (positionnement absolu laissé à l'appelant).
+- `FAB_AREA_HEIGHT` : marge basse à réserver dans une liste pour ne pas masquer le dernier élément.
+
+### SegmentedControl
+
+- Choix exclusif entre 2 ou 3 options sur une piste `surfaceMuted` ; option active sur fond blanc, ombre `xs`. Hauteur min. 48px.
+- Props : `options` (`{ value, label }[]`), `value`, `onChange`, `label` (libellé uppercase facultatif). Générique sur le type de `value`.
+- Usages : fréquence Mensuel / Annuel, onglets Je dois / On me doit.
+
+### Switch
+
+- Interrupteur oui / non : piste `success` si activé, `border` sinon, pouce blanc.
+- Props : `value`, `onValueChange`, `disabled`, `label`, `description`.
+- Avec `label` : ligne complète touchable (libellé `heading` + description à gauche, interrupteur à droite, hauteur min. 48px). Sans `label` : interrupteur seul.

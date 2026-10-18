@@ -8,3 +8,10 @@ export { FormScrollView, type FormScrollViewProps } from './FormScrollView';
 export { Drawer, type DrawerProps } from './Drawer';
 export { Sheet, useSheet, type SheetProps } from './Sheet';
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';
+export { Fab, FAB_AREA_HEIGHT, type FabProps, type FabVariant } from './Fab';
+export {
+  SegmentedControl,
+  type SegmentedControlProps,
+  type SegmentedOption,
+} from './SegmentedControl';
+export { Switch, type SwitchProps } from './Switch';

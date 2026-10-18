@@ -1,5 +1,5 @@
-import { PlaceholderScreen } from '@/features/placeholder/PlaceholderScreen';
+import { RecurringListScreen } from '@/features/recurring/RecurringListScreen';
 
 export default function Screen() {
-  return <PlaceholderScreen title="Paiements réguliers" />;
+  return <RecurringListScreen />;
 }

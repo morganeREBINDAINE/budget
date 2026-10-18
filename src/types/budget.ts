@@ -24,3 +24,28 @@ export type Transaction = {
   date: string;
   createdAt: string;
 };
+
+export type RecurringFrequency = 'monthly' | 'yearly';
+
+export type RecurringPayment = {
+  id: string;
+  name: string;
+  amountDa: number;
+  categoryId: string;
+  frequency: RecurringFrequency;
+  // 1–31 ; mois plus court → dernier jour du mois.
+  dayOfMonth: number;
+  // 1–12 si yearly, null si monthly.
+  month: number | null;
+  // YYYY-MM-DD : première échéance possible.
+  startDate: string;
+  active: boolean;
+  note: string | null;
+};
+
+// Échéance arrivée et non payée (encart rouge de l'accueil).
+export type DuePayment = {
+  payment: RecurringPayment;
+  // YYYY-MM-DD
+  dueDate: string;
+};
