@@ -46,7 +46,6 @@ function RootStack() {
         screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
       >
         <Stack.Screen name="(app)" />
-        <Stack.Screen name="(auth)/login" />
       </Stack>
     </>
   );

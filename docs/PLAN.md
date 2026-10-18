@@ -32,7 +32,7 @@ iOS · multilingue / i18n (textes en français écrits en dur) · thème sombre 
 | Écran                | Route                                                                    | Contenu                                                                                                                                                                                                                          |
 | -------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Connexion            | `/(auth)/login`                                                          | Logo, bouton « Continuer avec Google »                                                                                                                                                                                           |
-| Accueil              | `/(app)/index`                                                           | Barre haute (avatar → Compte, logo centré, icône export), sélecteur de mois ‹ Mois Année ›, cartes Entrées / Dépenses, graphique par catégorie, section « Détail », 2 boutons flottants « Ajouter entrée » / « Ajouter dépense » |
+| Accueil              | `/(app)/index`                                                           | Barre haute (logo centré, icône export), sélecteur de mois ‹ Mois Année ›, cartes Entrées / Dépenses, graphique par catégorie, section « Détail », 2 boutons flottants « Ajouter entrée » / « Ajouter dépense » |
 | Transaction          | `/(app)/transaction/new?type=income\|expense`, `/(app)/transaction/[id]` | Montant + devise (DA / EUR), taux si EUR, date (aujourd'hui par défaut), catégorie (dépense seulement), note facultative, bouton Enregistrer (+ Supprimer en modification)                                                       |
 | Compte               | `/(app)/account`                                                         | Profil Google, état de synchro (en attente / en cours % / à jour / erreur, dernière synchro, nb d'éléments en attente, bouton « Synchroniser »), lien Catégories, Exporter / Importer JSON, Déconnexion                          |
 | Catégories           | `/(app)/categories`                                                      | Liste des 9 catégories (icône, couleur, nom)                                                                                                                                                                                     |
@@ -127,7 +127,7 @@ Catégories par défaut : voiture, factures, maison, hanout, khaddar, boucherie,
 | Auth Google             | Connexion native → ID token → `supabase.auth.signInWithIdToken` (librairie exacte à confirmer en phase 5) |
 | Réseau                  | `@react-native-community/netinfo`                                                                         |
 | Synchro en arrière-plan | `expo-background-task` (+ synchro au premier plan au retour du réseau)                                    |
-| Graphique               | à choisir selon le design Stitch (ex. `react-native-gifted-charts` ou Skia)                               |
+| Graphique               | `react-native-svg` (anneau dessiné à la main)                                                             |
 | Icônes                  | `@expo/vector-icons` (MaterialCommunityIcons)                                                             |
 | Export / import         | `expo-file-system`, `expo-sharing`, `expo-document-picker`                                                |
 | Monitoring              | `@sentry/react-native`                                                                                    |
@@ -136,17 +136,11 @@ Catégories par défaut : voiture, factures, maison, hanout, khaddar, boucherie,
 
 ---
 
-## Phase 0 — Prérequis
-
-- [ ] Ouvrir une nouvelle session pour activer le MCP Stitch, lire les écrans du design et en extraire couleurs, typographie, espacements, logo, forme du graphique.
-- [ ] Vérifier sur le PC : Node LTS, JDK 17, Android SDK + `ANDROID_HOME`, un appareil ou émulateur Android.
-- [ ] Créer le projet Supabase et le compte Sentry (peut attendre les phases 4–7).
-
 ## Phase 1 — Squelette du projet
 
-- [ ] `npx create-expo-app@latest` (SDK 57, template TypeScript avec Expo Router), puis `git init`.
-- [ ] Configurer `app.json` : nom, slug, `android.package`, orientation portrait, `userInterfaceStyle: "light"`, icône et splash.
-- [ ] Structure des dossiers :
+- [x] `npx create-expo-app@latest` (SDK 57, template TypeScript avec Expo Router), puis `git init`.
+- [x] Configurer `app.json` : nom, slug, `android.package`, orientation portrait, `userInterfaceStyle: "light"`, icône et splash.
+- [x] Structure des dossiers :
   ```
   app/
     _layout.tsx
@@ -171,7 +165,7 @@ Catégories par défaut : voiture, factures, maison, hanout, khaddar, boucherie,
     lib/          # montants, dates, conversion EUR
     types/
   ```
-- [ ] ESLint + Prettier, alias d'import `@/`.
+- [x] ESLint + Prettier, alias d'import `@/`.
 - [x] Mettre en place le thème (tokens Stitch) et la police.
 - [ ] Vérifier que `npx expo run:android` lance l'app sur le téléphone.
 
@@ -179,12 +173,12 @@ Catégories par défaut : voiture, factures, maison, hanout, khaddar, boucherie,
 
 ## Phase 2 — Toutes les pages, UI seule
 
-Toutes les pages sont alimentées par `src/mocks/` (catégories par défaut + ~20 transactions sur 2–3 mois). Aucune base, aucun réseau.
+Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défaut + ~20 transactions sur 2–3 mois). Aucune base, aucun réseau.
 
 - [ ] Composants partagés : `AppHeader`, `MonthSelector`, `TotalCard`, `CategoryChart`, `TransactionRow` (avec glissement), `FabGroup`, `AmountInput`, `CurrencyToggle`, `DateField`, `CategoryPicker`, `ColorPicker`, `IconPicker`, `SyncStatusCard`, `EmptyState`, `ConfirmDialog`, `DuePaymentBanner` (encart rouge + bouton « J'ai payé »), `DayOfMonthPicker`.
-- [ ] Formatage : montants `12 500 DA` (séparateur d'espace), mois en français (« Octobre 2026 »), dates de la liste.
+- [ ] Formatage (`src/lib/format.ts` fait pour l'accueil) : montants `12 500 DA` (séparateur d'espace), mois en français (« Octobre 2026 »), dates de la liste.
 - [ ] **Connexion** : logo + bouton Google (sans action).
-- [ ] **Accueil** : barre haute, mois ‹ ›, cartes Entrées / Dépenses, graphique identique au design, section « Détail », boutons flottants, état vide pour un mois sans transaction.
+- [x] **Accueil** : barre haute (logo + export, pas d'avatar), mois ‹ ›, cartes Entrées / Dépenses, graphique identique au design, section « Détail », boutons flottants, état vide pour un mois sans transaction.
 - [ ] **Transaction** : formulaire entrée / dépense, bascule DA ↔ EUR avec champ taux et aperçu du montant en DA, date, catégorie (dépense), note ; mode modification avec Supprimer.
 - [ ] **Compte** : profil, carte d'état de synchro (afficher les 4 états avec des valeurs factices), Catégories, Exporter, Importer, Déconnexion.
 - [ ] **Catégories** + **Éditeur** : liste des 9, nom, couleur, icône.
