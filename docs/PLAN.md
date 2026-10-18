@@ -22,6 +22,8 @@ Ordre de travail : **1. squelette → 2. toutes les pages (UI seule, données fa
 - Export / import d'une sauvegarde JSON complète.
 - Paiements réguliers (loyer, abonnements…) : à l'échéance, un encart rouge s'affiche sur l'accueil et y reste jusqu'au clic sur « J'ai payé » (avec modale de confirmation), ce qui enregistre la dépense.
 - Suivi des erreurs avec Sentry.
+- Gestion des dettes (détails à spécifier avant implémentation).
+- Menu de navigation : icône burger en haut à gauche de la barre haute, ouvrant un menu avec 3 entrées : **Budget** (accueil / diagramme), **Dettes**, **Mon compte**.
 
 ### Hors périmètre v1
 
@@ -32,13 +34,16 @@ iOS · multilingue / i18n (textes en français écrits en dur) · thème sombre 
 | Écran                | Route                                                                    | Contenu                                                                                                                                                                                                                          |
 | -------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Connexion            | `/(auth)/login`                                                          | Logo, bouton « Continuer avec Google »                                                                                                                                                                                           |
-| Accueil              | `/(app)/index`                                                           | Barre haute (logo centré, icône export), sélecteur de mois ‹ Mois Année ›, cartes Entrées / Dépenses, graphique par catégorie, section « Détail », 2 boutons flottants « Ajouter entrée » / « Ajouter dépense » |
+| Accueil              | `/(app)/index`                                                           | Barre haute (icône burger à gauche, logo centré, icône export), sélecteur de mois ‹ Mois Année ›, cartes Entrées / Dépenses, graphique par catégorie, section « Détail », 2 boutons flottants « Ajouter entrée » / « Ajouter dépense » |
 | Transaction          | `/(app)/transaction/new?type=income\|expense`, `/(app)/transaction/[id]` | Montant + devise (DA / EUR), taux si EUR, date (aujourd'hui par défaut), catégorie (dépense seulement), note facultative, bouton Enregistrer (+ Supprimer en modification)                                                       |
 | Compte               | `/(app)/account`                                                         | Profil Google, état de synchro (en attente / en cours % / à jour / erreur, dernière synchro, nb d'éléments en attente, bouton « Synchroniser »), lien Catégories, Exporter / Importer JSON, Déconnexion                          |
 | Catégories           | `/(app)/categories`                                                      | Liste des 9 catégories (icône, couleur, nom)                                                                                                                                                                                     |
 | Éditeur de catégorie | `/(app)/categories/[id]`                                                 | Nom, palette de couleurs (arc-en-ciel), grille d'icônes Material Community Icons (blanches sur fond de couleur)                                                                                                                                                               |
 | Paiements réguliers  | `/(app)/recurring`                                                       | Liste des paiements réguliers (nom, montant, catégorie, prochaine échéance), bouton « Ajouter » ; accès depuis la page Compte                                                                                                   |
 | Éditeur de paiement  | `/(app)/recurring/new`, `/(app)/recurring/[id]`                          | Nom, montant en DA, catégorie, fréquence (mensuel / annuel), jour du mois (1–31) + mois si annuel, date de début, actif oui/non, note ; bouton Enregistrer (+ Supprimer en modification)                                                                                        |
+| Dettes               | `/(app)/debts`                                                           | À spécifier (liste des dettes, ajout / modification / remboursement…)                                                                                                                                                           |
+
+**Menu burger** : icône en haut à gauche de la barre haute ; ouvre un menu (tiroir latéral ou feuille — à décider) avec Budget (`/(app)/index`), Dettes (`/(app)/debts`) et Mon compte (`/(app)/account`).
 
 **Encart « paiement dû » (Accueil)** : en haut de l'accueil, un encart rouge par échéance arrivée et non payée (nom, montant, date d'échéance, « en retard de N jours » si dépassée), affiché à partir du jour J et **jusqu'au clic sur « J'ai payé »**, quel que soit le mois consulté. Le clic ouvre une modale de confirmation (« Confirmer le paiement de Loyer — 25 000 DA ? », date de paiement modifiable, aujourd'hui par défaut) ; la confirmation crée la dépense correspondante et fait disparaître l'encart.
 
@@ -183,6 +188,8 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [ ] **Compte** : profil, carte d'état de synchro (afficher les 4 états avec des valeurs factices), Catégories, Exporter, Importer, Déconnexion.
 - [ ] **Catégories** + **Éditeur** : liste des 9, nom, couleur, icône.
 - [ ] **Paiements réguliers** + **Éditeur** : liste, formulaire ; encarts rouges factices sur l'accueil (un dû aujourd'hui, un en retard), modale de confirmation « J'ai payé ».
+- [ ] **Menu burger** : icône en haut à gauche de la barre haute, menu Budget / Dettes / Mon compte.
+- [ ] **Dettes** : spécifier le besoin (données, écrans, modèle `debts`), puis UI avec données factices.
 - [ ] Validation visuelle écran par écran contre le design Stitch.
 
 **Terminé quand** : chaque écran correspond au design avec des données factices, et tous les parcours se cliquent de bout en bout.
