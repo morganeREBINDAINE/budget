@@ -3,9 +3,9 @@ import { useCallback, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { screenPadding, Stack, useTheme } from '@/design-system';
+import { AppHeader } from '@/features/navigation/AppHeader';
 import { currentYearMonth, shiftMonth, type YearMonth } from '@/lib/format';
 
-import { AppHeader } from './components/AppHeader';
 import { FabGroup } from './components/FabGroup';
 import { MonthPager } from './components/MonthPager';
 import { MonthSelector } from './components/MonthSelector';

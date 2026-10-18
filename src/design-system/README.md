@@ -81,3 +81,10 @@ Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, 
 - Props : `onClose` (appelé après l'animation de sortie, ex. `router.back()`), `heightRatio` (défaut 2/3), `children`.
 - Fermeture : toucher du fond, bouton retour Android, ou `useSheet().close()` depuis le contenu (croix, après enregistrement). Jamais au glissement : le contenu défile librement.
 - À rendre dans une route `presentation: 'transparentModal'`, `animation: 'none'`, `gestureEnabled: false`.
+
+### Drawer
+
+- Tiroir qui glisse depuis la gauche sur un fond assombri (`backdrop`), coins droits `radius.xxl`, marges haute et basse = safe area.
+- Props : `open` (contrôlé), `onClose` (fond touché, bouton retour Android), `widthRatio` (défaut 0,8), `children`.
+- Reste monté le temps de l'animation de sortie. Pas d'ouverture au glissement depuis le bord (pas de conflit avec les gestes horizontaux des écrans).
+- À rendre par-dessus la pile de navigation (ex. un provider autour du `Stack`).
