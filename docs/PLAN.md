@@ -178,7 +178,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [ ] Composants partagés : `AppHeader`, `MonthSelector`, `TotalCard`, `CategoryChart`, `TransactionRow` (avec glissement), `FabGroup`, `AmountInput`, `CurrencyToggle`, `DateField`, `CategoryPicker`, `ColorPicker`, `IconPicker`, `SyncStatusCard`, `EmptyState`, `ConfirmDialog`, `DuePaymentBanner` (encart rouge + bouton « J'ai payé »), `DayOfMonthPicker`.
 - [ ] Formatage (`src/lib/format.ts` fait pour l'accueil) : montants `12 500 DA` (séparateur d'espace), mois en français (« Octobre 2026 »), dates de la liste.
 - [x] **Connexion** : logo + bouton Google officiel (session factice : l'appui mène à l'accueil).
-- [x] **Accueil** : barre haute (logo + export, pas d'avatar), mois ‹ ›, cartes Entrées / Dépenses, graphique identique au design, section « Détail », boutons flottants, état vide pour un mois sans transaction.
+- [x] **Accueil** : barre haute (logo + export, pas d'avatar), mois ‹ ›, cartes Entrées / Dépenses, graphique identique au design, section « Détail », boutons flottants, état vide pour un mois sans transaction, glissement ← → sur la page pour changer de mois.
 - [ ] **Transaction** : formulaire entrée / dépense, bascule DA ↔ EUR avec champ taux et aperçu du montant en DA, date, catégorie (dépense), note ; mode modification avec Supprimer.
 - [ ] **Compte** : profil, carte d'état de synchro (afficher les 4 états avec des valeurs factices), Catégories, Exporter, Importer, Déconnexion.
 - [ ] **Catégories** + **Éditeur** : liste des 9, nom, couleur, icône.

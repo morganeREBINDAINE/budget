@@ -10,6 +10,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ThemeProvider, useTheme } from '@/design-system';
 import { MockSessionProvider, useSession } from '@/features/auth/MockSession';
@@ -32,11 +33,13 @@ export default function RootLayout() {
   if (!loaded && !error) return null;
 
   return (
-    <ThemeProvider>
-      <MockSessionProvider>
-        <RootStack />
-      </MockSessionProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <MockSessionProvider>
+          <RootStack />
+        </MockSessionProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 
