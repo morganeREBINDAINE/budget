@@ -5,7 +5,7 @@ export type Category = {
   id: string;
   name: string;
   color: string;
-  // Emoji (ex. « 🛒 »).
+  // Nom d'icône Material Community Icons (ex. « cart-outline »).
   icon: string;
   position: number;
 };

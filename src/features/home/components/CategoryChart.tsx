@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { type LayoutChangeEvent } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 import { Box, Card, Row, Stack, Text, useTheme } from '@/design-system';
 import { formatNumber } from '@/lib/format';
@@ -13,10 +13,33 @@ type Props = { totals: CategoryTotal[]; totalDa: number };
 const MAX_SIZE = 340;
 const STROKE = 30;
 const LABEL_SPACE = 34; // marge autour de l'anneau pour les pourcentages
-const GAP = 3; // espace entre deux segments, en px le long du cercle
+const GAP = 4; // espace entre deux segments, en px le long du cercle
+const CORNER = 6; // rayon des coins arrondis des segments
 const MIN_LABEL_PERCENT = 3; // en dessous, pas d'étiquette (chevauchements)
 const LABEL_WIDTH = 44;
 const DOT = 10;
+
+// Secteur d'anneau [a0, a1] (radians) aux coins arrondis.
+function roundedArc(cx: number, cy: number, r: number, a0: number, a1: number): string {
+  const ro = r + STROKE / 2;
+  const ri = r - STROKE / 2;
+  const c = Math.min(CORNER, ((a1 - a0) * ri) / 2, STROKE / 2);
+  const p = (rad: number, a: number) => `${cx + rad * Math.cos(a)} ${cy + rad * Math.sin(a)}`;
+  const dO = c / ro;
+  const dI = c / ri;
+  const large = a1 - a0 > Math.PI ? 1 : 0;
+  return [
+    `M ${p(ro - c, a0)}`,
+    `Q ${p(ro, a0)} ${p(ro, a0 + dO)}`,
+    `A ${ro} ${ro} 0 ${large} 1 ${p(ro, a1 - dO)}`,
+    `Q ${p(ro, a1)} ${p(ro - c, a1)}`,
+    `L ${p(ri + c, a1)}`,
+    `Q ${p(ri, a1)} ${p(ri, a1 - dI)}`,
+    `A ${ri} ${ri} 0 ${large} 0 ${p(ri, a0 + dI)}`,
+    `Q ${p(ri, a0)} ${p(ri + c, a0)}`,
+    'Z',
+  ].join(' ');
+}
 
 // Anneau des dépenses par catégorie, % autour de l'anneau, légende couleur + nom.
 // Les segments suivent l'ordre des catégories (position), donc l'ordre de l'arc-en-ciel.
@@ -30,7 +53,6 @@ export function CategoryChart({ totals, totalDa }: Props) {
 
   const size = Math.min(width, MAX_SIZE);
   const r = size / 2 - LABEL_SPACE - STROKE / 2;
-  const circ = 2 * Math.PI * r;
   const center = size / 2;
 
   const fractions = segments.map((s) => s.amountDa / totalDa);
@@ -43,20 +65,30 @@ export function CategoryChart({ totals, totalDa }: Props) {
       <Box align="center" justify="center" onLayout={onLayout} style={{ height: size || MAX_SIZE }}>
         {size > 0 && (
           <>
-            <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
-              {segments.map(({ category }, i) => (
+            <Svg width={size} height={size}>
+              {segments.length === 1 ? (
                 <Circle
-                  key={category.id}
                   cx={center}
                   cy={center}
                   r={r}
-                  stroke={category.color}
+                  stroke={segments[0].category.color}
                   strokeWidth={STROKE}
                   fill="none"
-                  strokeDasharray={`${Math.max(fractions[i] * circ - (segments.length > 1 ? GAP : 0), 1)} ${circ}`}
-                  strokeDashoffset={-starts[i] * circ}
                 />
-              ))}
+              ) : (
+                segments.map(({ category }, i) => {
+                  const gap = GAP / r / 2;
+                  const a0 = starts[i] * 2 * Math.PI - Math.PI / 2 + gap;
+                  const a1 = (starts[i] + fractions[i]) * 2 * Math.PI - Math.PI / 2 - gap;
+                  return (
+                    <Path
+                      key={category.id}
+                      d={roundedArc(center, center, r, a0, Math.max(a1, a0 + 0.01))}
+                      fill={category.color}
+                    />
+                  );
+                })
+              )}
             </Svg>
 
             {segments.map(({ category }, i) => {

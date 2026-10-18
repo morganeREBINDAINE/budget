@@ -36,7 +36,7 @@ iOS · multilingue / i18n (textes en français écrits en dur) · thème sombre 
 | Transaction          | `/(app)/transaction/new?type=income\|expense`, `/(app)/transaction/[id]` | Montant + devise (DA / EUR), taux si EUR, date (aujourd'hui par défaut), catégorie (dépense seulement), note facultative, bouton Enregistrer (+ Supprimer en modification)                                                       |
 | Compte               | `/(app)/account`                                                         | Profil Google, état de synchro (en attente / en cours % / à jour / erreur, dernière synchro, nb d'éléments en attente, bouton « Synchroniser »), lien Catégories, Exporter / Importer JSON, Déconnexion                          |
 | Catégories           | `/(app)/categories`                                                      | Liste des 9 catégories (icône, couleur, nom)                                                                                                                                                                                     |
-| Éditeur de catégorie | `/(app)/categories/[id]`                                                 | Nom, palette de couleurs (arc-en-ciel), grille d'emojis                                                                                                                                                               |
+| Éditeur de catégorie | `/(app)/categories/[id]`                                                 | Nom, palette de couleurs (arc-en-ciel), grille d'icônes Material Community Icons (blanches sur fond de couleur)                                                                                                                                                               |
 | Paiements réguliers  | `/(app)/recurring`                                                       | Liste des paiements réguliers (nom, montant, catégorie, prochaine échéance), bouton « Ajouter » ; accès depuis la page Compte                                                                                                   |
 | Éditeur de paiement  | `/(app)/recurring/new`, `/(app)/recurring/[id]`                          | Nom, montant en DA, catégorie, fréquence (mensuel / annuel), jour du mois (1–31) + mois si annuel, date de début, actif oui/non, note ; bouton Enregistrer (+ Supprimer en modification)                                                                                        |
 
@@ -52,7 +52,7 @@ iOS · multilingue / i18n (textes en français écrits en dur) · thème sombre 
 | user_id                 | uuid             | = `auth.uid()`                                            |
 | name                    | text             | requis, non vide                                          |
 | color                   | text             | hex `#RRGGBB`, nuancier arc-en-ciel (`categoryColors`)    |
-| icon                    | text             | emoji, dans la sélection autorisée                        |
+| icon                    | text             | nom Material Community Icons, dans la sélection autorisée |
 | position                | int              | 1–9, unique par utilisateur                               |
 | created_at / updated_at | timestamptz      |                                                           |
 | deleted_at              | timestamptz null | suppression logique (interdite si catégorie utilisée)     |
@@ -128,7 +128,7 @@ Catégories par défaut : voiture, factures, maison, hanout, khaddar, boucherie,
 | Réseau                  | `@react-native-community/netinfo`                                                                         |
 | Synchro en arrière-plan | `expo-background-task` (+ synchro au premier plan au retour du réseau)                                    |
 | Graphique               | `react-native-svg` (anneau dessiné à la main)                                                             |
-| Icônes                  | `@expo/vector-icons` (MaterialCommunityIcons) pour l'UI ; emojis pour les catégories                      |
+| Icônes                  | `@expo/vector-icons` (MaterialCommunityIcons)                                                             |
 | Export / import         | `expo-file-system`, `expo-sharing`, `expo-document-picker`                                                |
 | Monitoring              | `@sentry/react-native`                                                                                    |
 | Tests                   | Jest (`jest-expo`)                                                                                        |
@@ -175,7 +175,7 @@ Catégories par défaut : voiture, factures, maison, hanout, khaddar, boucherie,
 
 Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défaut + ~20 transactions sur 2–3 mois). Aucune base, aucun réseau.
 
-- [ ] Composants partagés : `AppHeader`, `MonthSelector`, `TotalCard`, `CategoryChart`, `TransactionRow` (avec glissement), `FabGroup`, `AmountInput`, `CurrencyToggle`, `DateField`, `CategoryPicker`, `ColorPicker`, `EmojiPicker`, `SyncStatusCard`, `EmptyState`, `ConfirmDialog`, `DuePaymentBanner` (encart rouge + bouton « J'ai payé »), `DayOfMonthPicker`.
+- [ ] Composants partagés : `AppHeader`, `MonthSelector`, `TotalCard`, `CategoryChart`, `TransactionRow` (avec glissement), `FabGroup`, `AmountInput`, `CurrencyToggle`, `DateField`, `CategoryPicker`, `ColorPicker`, `IconPicker`, `SyncStatusCard`, `EmptyState`, `ConfirmDialog`, `DuePaymentBanner` (encart rouge + bouton « J'ai payé »), `DayOfMonthPicker`.
 - [ ] Formatage (`src/lib/format.ts` fait pour l'accueil) : montants `12 500 DA` (séparateur d'espace), mois en français (« Octobre 2026 »), dates de la liste.
 - [ ] **Connexion** : logo + bouton Google (sans action).
 - [x] **Accueil** : barre haute (logo + export, pas d'avatar), mois ‹ ›, cartes Entrées / Dépenses, graphique identique au design, section « Détail », boutons flottants, état vide pour un mois sans transaction.

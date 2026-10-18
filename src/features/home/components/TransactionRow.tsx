@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { memo } from 'react';
 
 import { Card, Row, Stack, Text, useTheme } from '@/design-system';
@@ -14,7 +15,9 @@ export const TransactionRow = memo(function TransactionRow({ transaction, catego
   const isIncome = transaction.type === 'income';
   const label = isIncome ? 'Entrée' : (category?.name ?? 'Sans catégorie');
   const title = transaction.note ?? label;
-  const emoji = isIncome ? '💰' : (category?.icon ?? '📦');
+  const icon = (
+    isIncome ? 'cash-multiple' : (category?.icon ?? 'shape-outline')
+  ) as keyof typeof MaterialCommunityIcons.glyphMap;
   const time = transaction.createdAt.slice(11, 16);
 
   return (
@@ -26,12 +29,12 @@ export const TransactionRow = memo(function TransactionRow({ transaction, catego
             width: ICON_TILE,
             height: ICON_TILE,
             borderRadius: radius.md,
-            backgroundColor: isIncome ? colors.success : (category?.color ?? colors.textMuted),
+            backgroundColor: isIncome
+              ? colors.neutralStrong
+              : (category?.color ?? colors.textMuted),
           }}
         >
-          <Text variant="title" accessibilityElementsHidden>
-            {emoji}
-          </Text>
+          <MaterialCommunityIcons name={icon} size={24} color={colors.textOnColor} />
         </Row>
         <Stack flex={1} gap="xxs">
           <Text variant="heading" numberOfLines={1}>

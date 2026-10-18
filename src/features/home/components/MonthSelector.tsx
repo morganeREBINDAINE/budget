@@ -50,8 +50,7 @@ export function MonthSelector({ value, onPrevious, onNext }: Props) {
         paddingX="lg"
         style={{ height: minTouchTarget, minWidth: PILL_MIN_WIDTH }}
       >
-        <MaterialCommunityIcons name="calendar-blank-outline" size={18} color={colors.primary} />
-        <Text variant="heading" numberOfLines={1}>
+        <Text variant="body" weight="semibold" numberOfLines={1}>
           {formatMonthYear(value)}
         </Text>
       </Row>

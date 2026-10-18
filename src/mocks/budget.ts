@@ -3,15 +3,57 @@ import type { Category, Transaction } from '@/types/budget';
 
 // Données factices (phase 2) : remplacées par SQLite en phase 3.
 export const mockCategories: Category[] = [
-  { id: 'cat-voiture', name: 'Voiture', color: categoryRainbow[0], icon: '🚗', position: 1 },
-  { id: 'cat-factures', name: 'Factures', color: categoryRainbow[1], icon: '🧾', position: 2 },
-  { id: 'cat-maison', name: 'Maison', color: categoryRainbow[2], icon: '🏠', position: 3 },
-  { id: 'cat-hanout', name: 'Hanout', color: categoryRainbow[3], icon: '🛒', position: 4 },
-  { id: 'cat-khaddar', name: 'Khaddar', color: categoryRainbow[4], icon: '🥕', position: 5 },
-  { id: 'cat-boucherie', name: 'Boucherie', color: categoryRainbow[5], icon: '🥩', position: 6 },
-  { id: 'cat-neyla', name: 'Neyla', color: categoryRainbow[6], icon: '👶', position: 7 },
-  { id: 'cat-assya', name: 'Assya', color: categoryRainbow[7], icon: '👧', position: 8 },
-  { id: 'cat-loisirs', name: 'Loisirs', color: categoryRainbow[8], icon: '🎮', position: 9 },
+  { id: 'cat-voiture', name: 'Voiture', color: categoryRainbow[0], icon: 'car', position: 1 },
+  {
+    id: 'cat-factures',
+    name: 'Factures',
+    color: categoryRainbow[1],
+    icon: 'file-document-outline',
+    position: 2,
+  },
+  {
+    id: 'cat-maison',
+    name: 'Maison',
+    color: categoryRainbow[2],
+    icon: 'home-outline',
+    position: 3,
+  },
+  {
+    id: 'cat-hanout',
+    name: 'Hanout',
+    color: categoryRainbow[3],
+    icon: 'cart-outline',
+    position: 4,
+  },
+  { id: 'cat-khaddar', name: 'Khaddar', color: categoryRainbow[4], icon: 'carrot', position: 5 },
+  {
+    id: 'cat-boucherie',
+    name: 'Boucherie',
+    color: categoryRainbow[5],
+    icon: 'food-steak',
+    position: 6,
+  },
+  {
+    id: 'cat-neyla',
+    name: 'Neyla',
+    color: categoryRainbow[6],
+    icon: 'baby-face-outline',
+    position: 7,
+  },
+  {
+    id: 'cat-assya',
+    name: 'Assya',
+    color: categoryRainbow[7],
+    icon: 'face-woman-outline',
+    position: 8,
+  },
+  {
+    id: 'cat-loisirs',
+    name: 'Loisirs',
+    color: categoryRainbow[8],
+    icon: 'gamepad-variant-outline',
+    position: 9,
+  },
 ];
 
 const isoDaysAgo = (days: number) => {
