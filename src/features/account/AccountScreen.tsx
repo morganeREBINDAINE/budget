@@ -121,12 +121,6 @@ export function AccountScreen() {
               onPress={() => router.push('/categories')}
             />
             <ListItem
-              label="Paiements réguliers"
-              description="Loyer, abonnements…"
-              icon={icon('calendar-sync-outline')}
-              onPress={() => router.push('/recurring')}
-            />
-            <ListItem
               label="Exporter"
               description="Sauvegarde JSON complète"
               icon={icon('tray-arrow-down')}

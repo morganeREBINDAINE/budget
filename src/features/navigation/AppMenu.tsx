@@ -6,7 +6,7 @@ import { Pressable } from 'react-native';
 import { minTouchTarget, Row, Stack, Text, useTheme } from '@/design-system';
 import { AppLogo } from '@/features/brand/AppLogo';
 
-type MainRoute = '/' | '/debts' | '/account';
+type MainRoute = '/' | '/recurring' | '/debts' | '/account';
 
 type Entry = {
   route: MainRoute;
@@ -16,6 +16,7 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   { route: '/', label: 'Budget', icon: 'chart-donut' },
+  { route: '/recurring', label: 'Paiements réguliers', icon: 'calendar-sync-outline' },
   { route: '/debts', label: 'Dettes', icon: 'handshake-outline' },
   { route: '/account', label: 'Mon compte', icon: 'account-circle-outline' },
 ];

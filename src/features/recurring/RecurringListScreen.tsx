@@ -4,16 +4,8 @@ import { useCallback, useMemo } from 'react';
 import { FlatList, type ListRenderItem } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  Card,
-  Fab,
-  FAB_AREA_HEIGHT,
-  screenPadding,
-  ScreenHeader,
-  Stack,
-  Text,
-  useTheme,
-} from '@/design-system';
+import { Card, Fab, FAB_AREA_HEIGHT, screenPadding, Stack, Text, useTheme } from '@/design-system';
+import { AppHeader } from '@/features/navigation/AppHeader';
 import { mockCategories } from '@/mocks/budget';
 import { mockNextDueDates, mockRecurringPayments } from '@/mocks/recurring';
 import type { RecurringPayment } from '@/types/budget';
@@ -22,6 +14,8 @@ import { RecurringRow } from './components/RecurringRow';
 
 const openPayment = (id: string) => router.push({ pathname: '/recurring/[id]', params: { id } });
 const addPayment = () => router.push('/recurring/new');
+// TODO(phase 7) : export JSON.
+const exportData = () => {};
 
 const NO_DUE_DATE = '9999-12-31';
 
@@ -36,7 +30,7 @@ function sortPayments(payments: RecurringPayment[]): RecurringPayment[] {
   );
 }
 
-// Liste des paiements réguliers (virtualisée : le nombre peut grandir).
+// Écran principal (menu burger) : liste des paiements réguliers, virtualisée car le nombre peut grandir.
 export function RecurringListScreen() {
   const { colors, spacing } = useTheme();
   const insets = useSafeAreaInsets();
@@ -59,19 +53,22 @@ export function RecurringListScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack style={{ paddingHorizontal: screenPadding }}>
-        <ScreenHeader title="Paiements réguliers" onBack={() => router.back()} />
+        <AppHeader onExport={exportData} />
       </Stack>
       <FlatList
         data={payments}
         keyExtractor={(p) => p.id}
         renderItem={renderItem}
         ListHeaderComponent={
-          payments.length > 0 ? (
-            <Text variant="bodySmall" color="textSecondary" style={{ marginBottom: spacing.sm }}>
-              À l&apos;échéance, un encart rouge s&apos;affiche sur l&apos;accueil jusqu&apos;à ce
-              que tu confirmes le paiement.
-            </Text>
-          ) : null
+          <Stack gap="xs" style={{ marginBottom: spacing.sm }}>
+            <Text variant="title">Paiements réguliers</Text>
+            {payments.length > 0 ? (
+              <Text variant="bodySmall" color="textSecondary">
+                À l&apos;échéance, un encart rouge s&apos;affiche sur l&apos;accueil jusqu&apos;à ce
+                que tu confirmes le paiement.
+              </Text>
+            ) : null}
+          </Stack>
         }
         ListEmptyComponent={EmptyRecurring}
         ItemSeparatorComponent={Separator}
