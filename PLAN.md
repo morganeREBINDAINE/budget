@@ -172,7 +172,7 @@ Catégories par défaut : voiture, factures, maison, hanout, khaddar, boucherie,
     types/
   ```
 - [ ] ESLint + Prettier, alias d'import `@/`.
-- [ ] Mettre en place le thème (tokens Stitch) et la police.
+- [x] Mettre en place le thème (tokens Stitch) et la police.
 - [ ] Vérifier que `npx expo run:android` lance l'app sur le téléphone.
 
 **Terminé quand** : l'app démarre sur Android, avec la navigation entre toutes les routes vides.

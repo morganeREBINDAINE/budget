@@ -1,7 +1,7 @@
 import { Link, type Href } from 'expo-router';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView } from 'react-native';
 
-import { colors, fonts, fontSizes, radius, spacing } from '@/theme';
+import { Button, Text, useTheme } from '@/design-system';
 
 type Props = {
   title: string;
@@ -10,35 +10,22 @@ type Props = {
 
 // Écran vide temporaire (phase 1) : titre + liens pour parcourir la navigation.
 export function ScreenPlaceholder({ title, links = [] }: Props) {
+  const { colors, spacing } = useTheme();
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>{title}</Text>
+    <ScrollView
+      contentContainerStyle={{
+        flexGrow: 1,
+        padding: spacing.xxl,
+        gap: spacing.lg,
+        backgroundColor: colors.background,
+      }}
+    >
+      <Text variant="title">{title}</Text>
       {links.map((link) => (
-        <Link key={link.label} href={link.href} style={styles.link}>
-          {link.label}
+        <Link key={link.label} href={link.href} asChild>
+          <Button label={link.label} variant="secondary" />
         </Link>
       ))}
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: spacing.lg,
-    gap: spacing.md,
-    backgroundColor: colors.background,
-  },
-  title: { fontFamily: fonts.bold, fontSize: fontSizes.xl, color: colors.text },
-  link: {
-    fontFamily: fonts.semibold,
-    fontSize: fontSizes.md,
-    color: colors.onPrimary,
-    backgroundColor: colors.primary,
-    borderRadius: radius.full,
-    paddingVertical: 12,
-    paddingHorizontal: spacing.lg,
-    textAlign: 'center',
-    overflow: 'hidden',
-  },
-});

@@ -11,7 +11,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
-import { colors } from '@/theme';
+import { ThemeProvider, useTheme } from '@/design-system';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -30,6 +30,15 @@ export default function RootLayout() {
 
   if (!loaded && !error) return null;
 
+  return (
+    <ThemeProvider>
+      <RootStack />
+    </ThemeProvider>
+  );
+}
+
+function RootStack() {
+  const { colors } = useTheme();
   return (
     <>
       <StatusBar style="dark" />

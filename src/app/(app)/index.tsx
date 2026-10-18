@@ -1,9 +1,10 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenPlaceholder } from '@/components/screen-placeholder';
-import { colors } from '@/theme';
+import { useTheme } from '@/design-system';
 
 export default function HomeScreen() {
+  const { colors } = useTheme();
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ScreenPlaceholder
