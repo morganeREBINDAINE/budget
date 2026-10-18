@@ -62,7 +62,7 @@ export function FabGroup({ onAddIncome, onAddExpense }: Props) {
         'Ajouter une entrée',
         colors.accent,
         colors.accentPressed,
-        colors.onAccent,
+        colors.textOnColor,
         shadows.floatAccent,
         onAddIncome,
       )}

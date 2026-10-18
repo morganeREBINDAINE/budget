@@ -2,10 +2,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable } from 'react-native';
 
 import { minTouchTarget, Row, Text, useTheme } from '@/design-system';
+import { AppLogo } from '@/features/brand/AppLogo';
 
 type Props = { onExport: () => void };
-
-const LOGO_SIZE = 36;
 
 // Barre haute : logo centré, bouton d'export à droite.
 export function AppHeader({ onExport }: Props) {
@@ -14,18 +13,7 @@ export function AppHeader({ onExport }: Props) {
     <Row justify="space-between" paddingY="sm">
       <Row style={{ width: minTouchTarget }} />
       <Row gap="sm">
-        <Row
-          justify="center"
-          style={{
-            width: LOGO_SIZE,
-            height: LOGO_SIZE,
-            borderRadius: radius.md,
-            backgroundColor: colors.primary,
-            ...shadows.float,
-          }}
-        >
-          <MaterialCommunityIcons name="wallet-outline" size={20} color={colors.onPrimary} />
-        </Row>
+        <AppLogo />
         <Text variant="title">Budget</Text>
       </Row>
       <Pressable

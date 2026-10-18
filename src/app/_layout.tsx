@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { ThemeProvider, useTheme } from '@/design-system';
+import { MockSessionProvider, useSession } from '@/features/auth/MockSession';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -32,20 +33,28 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <RootStack />
+      <MockSessionProvider>
+        <RootStack />
+      </MockSessionProvider>
     </ThemeProvider>
   );
 }
 
 function RootStack() {
   const { colors } = useTheme();
+  const { signedIn } = useSession();
   return (
     <>
       <StatusBar style="dark" />
       <Stack
         screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
       >
-        <Stack.Screen name="(app)" />
+        <Stack.Protected guard={signedIn}>
+          <Stack.Screen name="(app)" />
+        </Stack.Protected>
+        <Stack.Protected guard={!signedIn}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
       </Stack>
     </>
   );

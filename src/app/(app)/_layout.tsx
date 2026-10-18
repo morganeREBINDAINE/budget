@@ -7,8 +7,6 @@ export default function AppLayout() {
   return (
     <Stack
       screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
-    >
-      <Stack.Screen name="index" />
-    </Stack>
+    />
   );
 }

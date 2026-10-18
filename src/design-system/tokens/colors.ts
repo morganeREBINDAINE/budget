@@ -59,5 +59,13 @@ export const categoryColors = {
 
 export const categoryRainbow = Object.values(categoryColors);
 
+// Couleurs de marque imposées par des chartes externes (logo Google officiel).
+export const brandColors = {
+  googleBlue: '#4285F4',
+  googleRed: '#EA4335',
+  googleYellow: '#FBBC05',
+  googleGreen: '#34A853',
+} as const;
+
 export type PaletteColor = keyof typeof palette;
 export type CategoryColor = keyof typeof categoryColors;

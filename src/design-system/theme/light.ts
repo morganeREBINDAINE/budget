@@ -31,7 +31,6 @@ const colors = {
   // Accent vif (bouton « + »), distinct de l'ambre de la catégorie Maison.
   accent: palette.yellow400,
   accentPressed: palette.yellow300,
-  onAccent: palette.slate900,
 
   danger: palette.rose600,
   dangerSoft: palette.rose50,

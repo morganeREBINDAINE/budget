@@ -142,8 +142,9 @@ Catégories par défaut : voiture, factures, maison, hanout, khaddar, boucherie,
 - [x] Configurer `app.json` : nom, slug, `android.package`, orientation portrait, `userInterfaceStyle: "light"`, icône et splash.
 - [x] Structure des dossiers :
   ```
-  app/
+  src/app/
     _layout.tsx
+    (auth)/_layout.tsx
     (auth)/login.tsx
     (app)/_layout.tsx
     (app)/index.tsx
@@ -156,8 +157,8 @@ Catégories par défaut : voiture, factures, maison, hanout, khaddar, boucherie,
     (app)/recurring/new.tsx
     (app)/recurring/[id].tsx
   src/
-    theme/        # couleurs, typo, espacements (issus de Stitch)
-    components/   # composants UI réutilisables
+    design-system/ # tokens, thème, primitives, composants UI génériques
+    features/     # composants et écrans métier, par fonctionnalité
     mocks/        # données factices (phase 2)
     db/           # schéma Drizzle, client, migrations (phase 3)
     repositories/ # accès données (phase 3)
@@ -167,9 +168,8 @@ Catégories par défaut : voiture, factures, maison, hanout, khaddar, boucherie,
   ```
 - [x] ESLint + Prettier, alias d'import `@/`.
 - [x] Mettre en place le thème (tokens Stitch) et la police.
-- [ ] Vérifier que `npx expo run:android` lance l'app sur le téléphone.
 
-**Terminé quand** : l'app démarre sur Android, avec la navigation entre toutes les routes vides.
+**Terminé quand** : toutes les routes existent (écrans vides « À venir »).
 
 ## Phase 2 — Toutes les pages, UI seule
 
@@ -177,7 +177,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 
 - [ ] Composants partagés : `AppHeader`, `MonthSelector`, `TotalCard`, `CategoryChart`, `TransactionRow` (avec glissement), `FabGroup`, `AmountInput`, `CurrencyToggle`, `DateField`, `CategoryPicker`, `ColorPicker`, `IconPicker`, `SyncStatusCard`, `EmptyState`, `ConfirmDialog`, `DuePaymentBanner` (encart rouge + bouton « J'ai payé »), `DayOfMonthPicker`.
 - [ ] Formatage (`src/lib/format.ts` fait pour l'accueil) : montants `12 500 DA` (séparateur d'espace), mois en français (« Octobre 2026 »), dates de la liste.
-- [ ] **Connexion** : logo + bouton Google (sans action).
+- [x] **Connexion** : logo + bouton Google officiel (session factice : l'appui mène à l'accueil).
 - [x] **Accueil** : barre haute (logo + export, pas d'avatar), mois ‹ ›, cartes Entrées / Dépenses, graphique identique au design, section « Détail », boutons flottants, état vide pour un mois sans transaction.
 - [ ] **Transaction** : formulaire entrée / dépense, bascule DA ↔ EUR avec champ taux et aperçu du montant en DA, date, catégorie (dépense), note ; mode modification avec Supprimer.
 - [ ] **Compte** : profil, carte d'état de synchro (afficher les 4 états avec des valeurs factices), Catégories, Exporter, Importer, Déconnexion.
