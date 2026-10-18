@@ -242,15 +242,15 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 
 ## Phase 3 — Données locales (hors ligne)
 
-- [ ] Schéma Drizzle (`categories`, `transactions`, `sync_queue`, `settings`) + migrations au démarrage.
+- [x] Schéma Drizzle complet (`categories`, `transactions`, `recurring_payments`, `recurring_occurrences`, `debt_people`, `debts`, `debt_repayments`, `sync_queue`, `settings` par utilisateur) avec contraintes CHECK et index, migration initiale (`npm run db:generate`), migrations au démarrage (`DatabaseProvider`, splash maintenu, écran d'erreur « Réessayer »), Drizzle Studio en dev. Pas de clés étrangères SQL (ordre d'insertion libre pour le pull et l'import).
 - [ ] Seed des 9 catégories au premier lancement (`settings.seeded`).
 - [ ] Repositories : transactions du mois triées par date desc puis `created_at` desc, totaux du mois, totaux par catégorie, CRUD transactions, mise à jour de catégorie, catégorie utilisée → suppression interdite.
 - [ ] `lib/money.ts` : conversion EUR → DA, arrondi, parsing des saisies.
 - [ ] Remplacer les mocks par les données SQLite (requêtes réactives `useLiveQuery`).
 - [ ] Validation des formulaires (montant > 0, taux > 0 si EUR, catégorie requise pour une dépense).
 - [ ] Mémoriser `last_eur_rate` et préremplir le champ taux.
-- [ ] Paiements réguliers : schéma `recurring_payments` + `recurring_occurrences`, `lib/recurring.ts` (calcul des échéances dues, jour 31 → dernier jour du mois), « J'ai payé » = création de la dépense + de l'occurrence dans une même transaction SQLite. Catégorie utilisée par un paiement régulier → suppression interdite.
-- [ ] Dettes : schéma `debt_people` + `debts` + `debt_repayments`, création auto de la personne à l'enregistrement, calcul du reste dû, validation (montant > 0, taux > 0 si EUR, remboursement ≤ reste dû, personne requise). Tests unitaires du reste dû et des conversions.
+- [ ] Paiements réguliers : `lib/recurring.ts` (calcul des échéances dues, jour 31 → dernier jour du mois), « J'ai payé » = création de la dépense + de l'occurrence dans une même transaction SQLite. Catégorie utilisée par un paiement régulier → suppression interdite.
+- [ ] Dettes : repositories, création auto de la personne à l'enregistrement, calcul du reste dû, validation (montant > 0, taux > 0 si EUR, remboursement ≤ reste dû, personne requise). Tests unitaires du reste dû et des conversions.
 - [ ] Tests unitaires : conversion, totaux, tri, règle de suppression des catégories, calcul des échéances (mensuel et annuel, mois courts, 29 février, échéances en retard multiples, paiement déjà confirmé).
 
 **Terminé quand** : l'app fonctionne entièrement en mode avion, et les données survivent à un redémarrage.

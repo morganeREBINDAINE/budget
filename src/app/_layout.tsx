@@ -9,12 +9,14 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useCallback } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
+import { DatabaseProvider } from '@/db/DatabaseProvider';
 import { ThemeProvider, useTheme } from '@/design-system';
 import { MockSessionProvider, useSession } from '@/features/auth/MockSession';
+import { DatabaseErrorScreen } from '@/features/db/DatabaseErrorScreen';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -27,9 +29,10 @@ export default function RootLayout() {
     PlusJakartaSans_800ExtraBold,
   });
 
-  useEffect(() => {
-    if (loaded || error) SplashScreen.hideAsync();
-  }, [loaded, error]);
+  // Le splash reste affiché jusqu'à ce que la base soit prête (ou en erreur).
+  const hideSplash = useCallback(() => {
+    void SplashScreen.hideAsync();
+  }, []);
 
   if (!loaded && !error) return null;
 
@@ -37,9 +40,11 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardProvider>
         <ThemeProvider>
-          <MockSessionProvider>
-            <RootStack />
-          </MockSessionProvider>
+          <DatabaseProvider onSettled={hideSplash} ErrorScreen={DatabaseErrorScreen}>
+            <MockSessionProvider>
+              <RootStack />
+            </MockSessionProvider>
+          </DatabaseProvider>
         </ThemeProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>
