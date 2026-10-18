@@ -19,7 +19,7 @@ Hiérarchie : `tokens → theme → primitives → components`. Une couche basse
 | `radius.ts` | `radius` | none 0, sm 8, md 12, lg 16, xl 24, xxl 32, full 9999 |
 | `typography.ts` | `fontFamily` | regular, medium, semibold, bold, extrabold (Plus Jakarta Sans) |
 | | `typography` | `display` 32/800, `title` 18/700, `heading` 16/700, `body` 14/500, `bodySmall` 12/400, `label` 12/700 uppercase, `caption` 11/600 |
-| `shadows.ts` | `shadows` | none, xs, sm, card, soft, float, floatGreen (`boxShadow`) |
+| `shadows.ts` | `shadows` | none, xs, sm, card, soft, float, floatGreen, floatAccent (`boxShadow`) |
 | `motion.ts` | `motion` | `duration` fast 150 / base 250 / slow 400 ; `easing` standard / decelerate / accelerate (bezier) ; `pressScale` 0.98 |
 
 Les écrans n'utilisent pas `palette` directement : passer par `useTheme().colors`.
@@ -31,7 +31,7 @@ Les écrans n'utilisent pas `palette` directement : passer par `useTheme().color
 - `ThemeProvider` (`scheme?: 'light' | 'dark'`, défaut `light`) : monté dans `src/app/_layout.tsx`.
 - `useTheme()` : renvoie le thème courant.
 
-Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, `border`, `borderSubtle`, `backdrop`, `text`, `textStrong`, `textSecondary`, `textMuted`, `textOnColor`, `primary`, `primarySoft`, `onPrimary`, `success`, `successStrong`, `successSoft`, `danger`, `dangerSoft`, `neutralStrong`, `neutralStrongPressed`, `transparent`.
+Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, `border`, `borderSubtle`, `backdrop`, `text`, `textStrong`, `textSecondary`, `textMuted`, `textOnColor`, `primary`, `primarySoft`, `onPrimary`, `success`, `successStrong`, `successSoft`, `accent`, `accentPressed`, `onAccent`, `danger`, `dangerSoft`, `neutralStrong`, `neutralStrongPressed`, `transparent`.
 
 ## Primitives (`primitives/`)
 

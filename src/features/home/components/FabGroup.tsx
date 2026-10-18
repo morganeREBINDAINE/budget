@@ -18,6 +18,7 @@ export function FabGroup({ onAddIncome, onAddExpense }: Props) {
     label: string,
     bg: string,
     bgPressed: string,
+    fg: string,
     shadow: Pick<ViewStyle, 'boxShadow'>,
     onPress: () => void,
   ) => (
@@ -36,7 +37,7 @@ export function FabGroup({ onAddIncome, onAddExpense }: Props) {
         ...shadow,
       })}
     >
-      <MaterialCommunityIcons name={icon} size={32} color={colors.textOnColor} />
+      <MaterialCommunityIcons name={icon} size={32} color={fg} />
     </Pressable>
   );
 
@@ -52,15 +53,17 @@ export function FabGroup({ onAddIncome, onAddExpense }: Props) {
         'Ajouter une dépense',
         colors.neutralStrong,
         colors.neutralStrongPressed,
+        colors.textOnColor,
         shadows.sm,
         onAddExpense,
       )}
       {fab(
         'plus',
         'Ajouter une entrée',
-        colors.success,
-        colors.successStrong,
-        shadows.floatGreen,
+        colors.accent,
+        colors.accentPressed,
+        colors.onAccent,
+        shadows.floatAccent,
         onAddIncome,
       )}
     </Row>

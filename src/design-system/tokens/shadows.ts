@@ -9,6 +9,7 @@ export const shadows = {
   soft: { boxShadow: '0 8px 30px rgba(0, 0, 0, 0.04)' },
   float: { boxShadow: '0 12px 36px -4px rgba(79, 70, 229, 0.35)' },
   floatGreen: { boxShadow: '0 10px 25px -3px rgba(16, 185, 129, 0.3)' },
+  floatAccent: { boxShadow: '0 10px 25px -3px rgba(234, 179, 8, 0.4)' },
 } as const satisfies Record<string, Pick<ViewStyle, 'boxShadow'>>;
 
 export type ShadowToken = keyof typeof shadows;

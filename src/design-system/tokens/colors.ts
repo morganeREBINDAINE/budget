@@ -30,6 +30,9 @@ export const palette = {
   rose500: '#F43F5E',
   rose600: '#E11D48',
 
+  yellow300: '#FDE047',
+  yellow400: '#FACC15',
+
   orange600: '#EA580C',
   blue600: '#2563EB',
   violet600: '#7C3AED',
