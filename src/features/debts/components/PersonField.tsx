@@ -9,6 +9,7 @@ type Props = {
   value: string;
   onChange: (value: string) => void;
   people: DebtPerson[];
+  label?: string;
   error?: string;
 };
 
@@ -26,7 +27,7 @@ export const normalizeName = (s: string) =>
   s.trim().normalize('NFD').replace(DIACRITICS, '').toLowerCase();
 
 // Champ « Personne » avec autocomplétion des noms enregistrés (5 suggestions au plus).
-export function PersonField({ value, onChange, people, error }: Props) {
+export function PersonField({ value, onChange, people, label = 'Personne', error }: Props) {
   const { colors, radius, spacing } = useTheme();
   const [showSuggestions, setShowSuggestions] = useState(false);
   const query = normalizeName(value);
@@ -51,7 +52,7 @@ export function PersonField({ value, onChange, people, error }: Props) {
   return (
     <Stack gap="xs">
       <Input
-        label="Personne"
+        label={label}
         value={value}
         onChangeText={(v) => {
           onChange(v);

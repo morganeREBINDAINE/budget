@@ -37,7 +37,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
 export function DebtsScreen() {
   const { colors, spacing } = useTheme();
   const insets = useSafeAreaInsets();
-  const [direction, setDirection] = useState<DebtDirection>('i_owe');
+  const [direction, setDirection] = useState<DebtDirection>('owed_to_me');
   const [settledOpen, setSettledOpen] = useState(false);
   const { active, settled, totalRemainingDa } = useDebts(direction);
 

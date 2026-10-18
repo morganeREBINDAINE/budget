@@ -14,7 +14,6 @@ import {
   Row,
   screenPadding,
   ScreenHeader,
-  SegmentedControl,
   Stack,
   Text,
   useTheme,
@@ -32,7 +31,6 @@ import type { Currency, Debt, DebtDirection, DebtRepayment } from '@/types/budge
 import { PersonField } from './components/PersonField';
 import { ProgressBar } from './components/ProgressBar';
 import { RepaymentRow } from './components/RepaymentRow';
-import { DIRECTION_OPTIONS } from './direction';
 
 type Props = { mode: 'new'; direction: DebtDirection } | { mode: 'edit'; debt: Debt | undefined };
 
@@ -76,7 +74,8 @@ function DebtForm({ debt, initialDirection }: FormProps) {
     ? (mockDebtPeople.find((p) => p.id === debt.personId)?.name ?? '')
     : '';
 
-  const [direction, setDirection] = useState<DebtDirection>(initialDirection);
+  // Sens fixé par l'onglet d'origine (création) ou par la dette (modification).
+  const direction = debt?.direction ?? initialDirection;
   const [person, setPerson] = useState(initialPerson);
   const [amount, setAmount] = useState(debt ? amountToInput(debt) : '');
   const [currency, setCurrency] = useState<Currency>(debt?.currency ?? 'DZD');
@@ -160,17 +159,8 @@ function DebtForm({ debt, initialDirection }: FormProps) {
     <Stack gap="xl" style={{ marginBottom: debt ? spacing.lg : 0 }}>
       {debt && <DebtSummary amountDa={debt.amountDa} repaidDa={repaid} />}
 
-      <SegmentedControl
-        label="Sens"
-        options={DIRECTION_OPTIONS}
-        value={direction}
-        onChange={(d) => {
-          setDirection(d);
-          clearError('submit');
-        }}
-      />
-
       <PersonField
+        label={direction === 'i_owe' ? 'À qui je dois ?' : 'Qui me doit ?'}
         value={person}
         onChange={(v) => {
           setPerson(v);

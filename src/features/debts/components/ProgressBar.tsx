@@ -11,7 +11,7 @@ type Props = {
 const HEIGHT = 6;
 
 // Barre de progression du remboursement.
-export function ProgressBar({ progress, color = 'success' }: Props) {
+export function ProgressBar({ progress, color = 'accent' }: Props) {
   const { colors, radius } = useTheme();
   const clamped = Math.min(1, Math.max(0, progress));
   return (
