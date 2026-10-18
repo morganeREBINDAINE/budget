@@ -1,5 +1,5 @@
-import { PlaceholderScreen } from '@/features/placeholder/PlaceholderScreen';
+import { AccountScreen } from '@/features/account/AccountScreen';
 
 export default function Screen() {
-  return <PlaceholderScreen title="Mon compte" withAppHeader />;
+  return <AccountScreen />;
 }

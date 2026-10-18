@@ -1,0 +1,6 @@
+// État de la synchronisation avec Supabase (carte de la page Compte).
+export type SyncStatus =
+  | { state: 'pending'; pendingCount: number; lastSyncedAt: string | null }
+  | { state: 'syncing'; progress: number; pendingCount: number }
+  | { state: 'synced'; lastSyncedAt: string }
+  | { state: 'error'; message: string; pendingCount: number; lastSyncedAt: string | null };

@@ -88,3 +88,17 @@ Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, 
 - Props : `open` (contrôlé), `onClose` (fond touché, bouton retour Android), `widthRatio` (défaut 0,8), `children`.
 - Reste monté le temps de l'animation de sortie. Pas d'ouverture au glissement depuis le bord (pas de conflit avec les gestes horizontaux des écrans).
 - À rendre par-dessus la pile de navigation (ex. un provider autour du `Stack`).
+
+### ListItem
+
+- Ligne d'action d'une liste courte (réglages, menu) : pastille d'icône 40px, libellé, description facultative, chevron « › ».
+- `variant` : `default` (pastille `primarySoft`, texte `text`), `danger` (pastille `dangerSoft`, texte `danger` : déconnexion).
+- Props : `label` (requis), `description`, `icon` (`ReactNode`, posé sur la pastille), `onPress` (`() => void | Promise`), `showChevron` (défaut : affiché si `onPress`), `disabled`.
+- Si `onPress` renvoie une Promise : spinner à la place du chevron, et un garde ignore les appuis jusqu'à la résolution.
+- Pour plusieurs lignes, les grouper dans une `Card padding="xs"`. Listes courtes et fixes uniquement (pas de virtualisation).
+
+### ConfirmDialog
+
+- Modale centrée sur un fond assombri, carte blanche `radius.xl`, titre + message, bouton de confirmation et « Annuler » (`ghost`).
+- Props : `visible`, `title`, `message`, `confirmLabel` (défaut « Confirmer »), `cancelLabel` (défaut « Annuler »), `variant` (`primary` → bouton noir, `danger` → bouton rouge), `onConfirm` (`() => void | Promise`), `onCancel`, `error` (message rouge géré par l'appelant), `children` (contenu additionnel, ex. un champ date).
+- Si `onConfirm` renvoie une Promise : spinner dans le bouton, garde contre les doubles appuis, fermeture (Annuler, fond, retour Android) bloquée jusqu'à la résolution. L'appelant ferme la modale (`visible=false`) en cas de succès.

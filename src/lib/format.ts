@@ -75,3 +75,21 @@ export function parseIsoDate(date: string): Date {
   const [y, m, d] = date.split('-').map(Number);
   return new Date(y, m - 1, d);
 }
+
+// ISO date-heure → « aujourd'hui à 14:32 », « hier à 09:05 » ou « 18 mars à 18:40 ».
+export function formatDateTime(iso: string, now = new Date()): string {
+  const d = new Date(iso);
+  const day = formatListDate(toIsoDate(d), now);
+  const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${day.charAt(0).toLowerCase()}${day.slice(1)} à ${time}`;
+}
+
+// « Yasmine Benali » → « YB ».
+export function initials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('');
+}
