@@ -11,6 +11,7 @@ import {
   Row,
   Stack,
   Text,
+  useSheet,
   useTheme,
 } from '@/design-system';
 import { formatAmount, toIsoDate } from '@/lib/format';
@@ -18,7 +19,6 @@ import { eurToDa, parseDecimal } from '@/lib/money';
 import { MOCK_EUR_RATE, mockCategories } from '@/mocks/budget';
 import type { Currency, Transaction, TransactionType } from '@/types/budget';
 
-import { closeSheet } from './closeSheet';
 import { AmountInput } from './components/AmountInput';
 import { CategoryGrid } from './components/CategoryGrid';
 import { DateField } from './components/DateField';
@@ -41,6 +41,7 @@ function initialAmount(t: Transaction): string {
 // Formulaire d'ajout / modification d'une entrée ou d'une dépense (feuille aux 2/3).
 export function TransactionForm(props: Props) {
   const { colors, spacing, radius } = useTheme();
+  const { close } = useSheet();
   const existing = props.mode === 'edit' ? props.transaction : null;
   const type = existing ? existing.type : props.mode === 'new' ? props.type : 'expense';
   const isExpense = type === 'expense';
@@ -83,7 +84,7 @@ export function TransactionForm(props: Props) {
     if (Object.keys(next).length > 0) return;
     try {
       await simulateRequest();
-      closeSheet();
+      close();
     } catch {
       setErrors({ submit: "L'enregistrement a échoué. Réessaie." });
     }
@@ -95,7 +96,7 @@ export function TransactionForm(props: Props) {
     setDeleting(true);
     try {
       await simulateRequest();
-      closeSheet();
+      close();
     } catch {
       setErrors({ submit: 'La suppression a échoué. Réessaie.' });
     } finally {
@@ -136,7 +137,7 @@ export function TransactionForm(props: Props) {
       <Row justify="space-between">
         <Text variant="title">{title}</Text>
         <Pressable
-          onPress={closeSheet}
+          onPress={close}
           accessibilityRole="button"
           accessibilityLabel="Fermer"
           hitSlop={spacing.sm}

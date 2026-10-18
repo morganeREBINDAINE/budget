@@ -22,6 +22,7 @@ export const typography = {
   title: { fontFamily: fontFamily.bold, fontSize: 18, lineHeight: 26, letterSpacing: -0.3 },
   heading: { fontFamily: fontFamily.bold, fontSize: 16, lineHeight: 24, letterSpacing: -0.2 },
   body: { fontFamily: fontFamily.medium, fontSize: 14, lineHeight: 20 },
+  bodyCompact: { fontFamily: fontFamily.semibold, fontSize: 13, lineHeight: 18 },
   bodySmall: { fontFamily: fontFamily.regular, fontSize: 12, lineHeight: 16 },
   label: {
     fontFamily: fontFamily.bold,

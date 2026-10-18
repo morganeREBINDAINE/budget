@@ -3,3 +3,4 @@ export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from '.
 export { Card, type CardProps, type CardVariant } from './Card';
 export { Input, type InputProps } from './Input';
 export { FormScrollView, type FormScrollViewProps } from './FormScrollView';
+export { Sheet, useSheet, type SheetProps } from './Sheet';

@@ -1,8 +1,7 @@
-import { Button, Stack, Text } from '@/design-system';
-
-import { closeSheet } from './closeSheet';
+import { Button, Stack, Text, useSheet } from '@/design-system';
 
 export function TransactionNotFound() {
+  const { close } = useSheet();
   return (
     <Stack flex={1} bg="surface" align="center" justify="center" gap="lg" padding="xl">
       <Text variant="title" align="center">
@@ -11,7 +10,7 @@ export function TransactionNotFound() {
       <Text variant="body" color="textSecondary" align="center">
         Elle a peut-être été supprimée.
       </Text>
-      <Button label="Fermer" variant="secondary" onPress={closeSheet} />
+      <Button label="Fermer" variant="secondary" onPress={close} />
     </Stack>
   );
 }

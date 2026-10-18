@@ -7,17 +7,14 @@ import { useTheme } from '@/design-system';
 // ci-dessous (transaction/new) deviendrait l'écran initial après connexion.
 export const unstable_settings = { initialRouteName: 'index' };
 
-// Feuille native ouverte aux 2/3 de l'écran.
-const SHEET_DETENT = 0.66;
-
 export default function AppLayout() {
-  const { colors, radius } = useTheme();
+  const { colors } = useTheme();
+  // La feuille (fond assombri + animation) est dessinée par <Sheet> dans l'écran lui-même.
   const sheet: ComponentProps<typeof Stack.Screen>['options'] = {
-    presentation: 'formSheet',
-    sheetAllowedDetents: [SHEET_DETENT],
-    sheetGrabberVisible: true,
-    sheetCornerRadius: radius.xxl,
-    contentStyle: { backgroundColor: colors.surface },
+    presentation: 'transparentModal',
+    animation: 'none',
+    gestureEnabled: false,
+    contentStyle: { backgroundColor: colors.transparent },
   };
   return (
     <Stack

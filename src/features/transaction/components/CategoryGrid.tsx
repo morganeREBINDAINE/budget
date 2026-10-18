@@ -79,7 +79,7 @@ export function CategoryGrid({ categories, value, onChange, error }: Props) {
                   <MaterialCommunityIcons name={icon} size={20} color={colors.textOnColor} />
                 </Stack>
                 <Text
-                  variant="caption"
+                  variant="bodyCompact"
                   weight="bold"
                   color={selected ? 'textOnColor' : 'textStrong'}
                   numberOfLines={1}

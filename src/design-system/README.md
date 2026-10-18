@@ -19,7 +19,7 @@ Hiérarchie : `tokens → theme → primitives → components`. Une couche basse
 |                 | `minTouchTarget`  | 48                                                                                                                                                                                                 |
 | `radius.ts`     | `radius`          | none 0, sm 8, md 12, lg 16, xl 24, xxl 32, full 9999                                                                                                                                               |
 | `typography.ts` | `fontFamily`      | regular, medium, semibold, bold, extrabold (Plus Jakarta Sans)                                                                                                                                     |
-|                 | `typography`      | `display` 32/800, `title` 18/700, `heading` 16/700, `body` 14/500, `bodySmall` 12/400, `label` 12/700 uppercase, `caption` 11/600                                                                  |
+|                 | `typography`      | `display` 32/800, `title` 18/700, `heading` 16/700, `body` 14/500, `bodyCompact` 13/600, `bodySmall` 12/400, `label` 12/700 uppercase, `caption` 11/600                                                                  |
 | `shadows.ts`    | `shadows`         | none, xs, sm, card, soft, float, floatGreen, floatAccent (`boxShadow`)                                                                                                                             |
 | `motion.ts`     | `motion`          | `duration` fast 150 / base 250 / slow 400 ; `easing` standard / decelerate / accelerate (bezier) ; `pressScale` 0.98                                                                               |
 
@@ -74,3 +74,10 @@ Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, 
 - `KeyboardAwareScrollView` (react-native-keyboard-controller) : le champ en cours de saisie reste visible au-dessus du clavier.
 - Défauts : `bottomOffset` = `spacing.xxl`, `keyboardShouldPersistTaps="handled"`, sans indicateur de défilement. Accepte toutes les props de `ScrollView`.
 - Nécessite `KeyboardProvider` (monté dans `src/app/_layout.tsx`).
+
+### Sheet
+
+- Feuille modale qui monte du bas sur un fond assombri (`backdrop`), coins hauts `radius.xxl`, marge basse = safe area.
+- Props : `onClose` (appelé après l'animation de sortie, ex. `router.back()`), `heightRatio` (défaut 2/3), `children`.
+- Fermeture : toucher du fond, bouton retour Android, ou `useSheet().close()` depuis le contenu (croix, après enregistrement). Jamais au glissement : le contenu défile librement.
+- À rendre dans une route `presentation: 'transparentModal'`, `animation: 'none'`, `gestureEnabled: false`.
