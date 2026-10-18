@@ -25,6 +25,8 @@ export default function AppLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="transaction/new" options={sheet} />
         <Stack.Screen name="transaction/[id]" options={sheet} />
+        <Stack.Screen name="repayment/new" options={sheet} />
+        <Stack.Screen name="repayment/[id]" options={sheet} />
       </Stack>
     </MenuProvider>
   );

@@ -55,7 +55,7 @@ Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, 
 
 ### Card
 
-- `variant` : `elevated` (ombre `card`, défaut), `flat` (sans ombre).
+- `variant` : `elevated` (ombre `card`, défaut), `flat` (sans ombre), `muted` (fond `surfaceMuted`, sans ombre : élément inactif ou archivé, ex. dette soldée).
 - Surface blanche, bordure `borderSubtle`. `padding` (défaut `lg`) et `radius` (défaut `lg`) acceptent les tokens ; les autres props sont celles de `Box`.
 
 ### Input
@@ -74,6 +74,11 @@ Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, 
 - `KeyboardAwareScrollView` (react-native-keyboard-controller) : le champ en cours de saisie reste visible au-dessus du clavier.
 - Défauts : `bottomOffset` = `spacing.xxl`, `keyboardShouldPersistTaps="handled"`, sans indicateur de défilement. Accepte toutes les props de `ScrollView`.
 - Nécessite `KeyboardProvider` (monté dans `src/app/_layout.tsx`).
+
+### FormSectionList
+
+- `SectionList` virtualisée dont le défilement passe par `KeyboardAwareScrollView` : à utiliser à la place de `FormScrollView` quand l'écran contient des champs **et** une liste longue (ex. formulaire en `ListHeaderComponent`, remboursements en lignes).
+- Défauts : `bottomOffset` = `spacing.xxl`, `keyboardShouldPersistTaps="handled"`, sans indicateur de défilement, en-têtes de section non collants. Accepte toutes les props de `SectionList`.
 
 ### Sheet
 
@@ -127,3 +132,10 @@ Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, 
 - Interrupteur oui / non : piste `success` si activé, `border` sinon, pouce blanc.
 - Props : `value`, `onValueChange`, `disabled`, `label`, `description`.
 - Avec `label` : ligne complète touchable (libellé `heading` + description à gauche, interrupteur à droite, hauteur min. 48px). Sans `label` : interrupteur seul.
+
+### Avatar
+
+- Pastille ronde aux initiales (pas de photo).
+- `size` : `sm` (40px, texte `heading`, défaut), `lg` (56px, texte `title`).
+- `variant` : `primary` (fond indigo, texte blanc, défaut), `neutral` (fond `primarySoft`, texte `primary`).
+- Props : `initials` (requis, déjà calculées, ex. `initials(name)` de `@/lib/format`), `size`, `variant`.

@@ -49,3 +49,39 @@ export type DuePayment = {
   // YYYY-MM-DD
   dueDate: string;
 };
+
+// Dettes : indépendantes du budget (aucune transaction créée).
+export type DebtDirection = 'i_owe' | 'owed_to_me';
+
+export type DebtPerson = {
+  id: string;
+  name: string;
+};
+
+export type Debt = {
+  id: string;
+  direction: DebtDirection;
+  personId: string;
+  amountDa: number;
+  currency: Currency;
+  // Montant EUR saisi (centimes) et taux DA/EUR du jour, si currency = EUR.
+  originalAmountCents: number | null;
+  eurRate: number | null;
+  // YYYY-MM-DD
+  date: string;
+  note: string | null;
+  createdAt: string;
+};
+
+export type DebtRepayment = {
+  id: string;
+  debtId: string;
+  amountDa: number;
+  currency: Currency;
+  originalAmountCents: number | null;
+  eurRate: number | null;
+  // YYYY-MM-DD
+  date: string;
+  note: string | null;
+  createdAt: string;
+};

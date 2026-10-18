@@ -1,5 +1,5 @@
-import { PlaceholderScreen } from '@/features/placeholder/PlaceholderScreen';
+import { DebtsScreen } from '@/features/debts/DebtsScreen';
 
 export default function Screen() {
-  return <PlaceholderScreen title="Dettes" withAppHeader />;
+  return <DebtsScreen />;
 }

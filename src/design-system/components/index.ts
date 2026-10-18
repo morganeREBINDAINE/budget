@@ -15,3 +15,5 @@ export {
   type SegmentedOption,
 } from './SegmentedControl';
 export { Switch, type SwitchProps } from './Switch';
+export { Avatar, type AvatarProps, type AvatarSize, type AvatarVariant } from './Avatar';
+export { FormSectionList, type FormSectionListProps } from './FormSectionList';

@@ -7,21 +7,21 @@ import {
   Button,
   FormScrollView,
   Input,
-  minTouchTarget,
   Row,
   Stack,
   Text,
   useSheet,
   useTheme,
 } from '@/design-system';
-import { formatAmount, toIsoDate } from '@/lib/format';
-import { eurToDa, parseDecimal } from '@/lib/money';
+import { toIsoDate } from '@/lib/format';
+import { amountToInput, eurToDa, parseDecimal, toDecimalInput } from '@/lib/money';
 import { MOCK_EUR_RATE, mockCategories } from '@/mocks/budget';
 import type { Currency, Transaction, TransactionType } from '@/types/budget';
 
 import { AmountInput } from './components/AmountInput';
 import { CategoryGrid } from './components/CategoryGrid';
 import { DateField } from './components/DateField';
+import { EurRateField } from './components/EurRateField';
 
 type Props = { mode: 'new'; type: TransactionType } | { mode: 'edit'; transaction: Transaction };
 
@@ -29,14 +29,6 @@ type Errors = Partial<Record<'amount' | 'rate' | 'category' | 'submit', string>>
 
 // TODO(phase 3) : remplacer par l'écriture SQLite.
 const simulateRequest = () => new Promise((resolve) => setTimeout(resolve, 600));
-
-const toInput = (n: number) => String(n).replace('.', ',');
-
-function initialAmount(t: Transaction): string {
-  if (t.currency === 'EUR' && t.originalAmountCents !== null)
-    return toInput(t.originalAmountCents / 100);
-  return String(t.amountDa);
-}
 
 // Formulaire d'ajout / modification d'une entrée ou d'une dépense (feuille aux 2/3).
 export function TransactionForm(props: Props) {
@@ -46,9 +38,9 @@ export function TransactionForm(props: Props) {
   const type = existing ? existing.type : props.mode === 'new' ? props.type : 'expense';
   const isExpense = type === 'expense';
 
-  const [amount, setAmount] = useState(existing ? initialAmount(existing) : '');
+  const [amount, setAmount] = useState(existing ? amountToInput(existing) : '');
   const [currency, setCurrency] = useState<Currency>(existing?.currency ?? 'DZD');
-  const [rate, setRate] = useState(toInput(existing?.eurRate ?? MOCK_EUR_RATE));
+  const [rate, setRate] = useState(toDecimalInput(existing?.eurRate ?? MOCK_EUR_RATE));
   const [date, setDate] = useState(existing?.date ?? toIsoDate(new Date()));
   const [note, setNote] = useState(existing?.note ?? '');
   const [categoryId, setCategoryId] = useState<string | null>(existing?.categoryId ?? null);
@@ -169,36 +161,15 @@ export function TransactionForm(props: Props) {
       />
 
       {currency === 'EUR' && amount.trim() !== '' && (
-        <Row gap="md" align="flex-start">
-          <Stack flex={1}>
-            <Input
-              label="Taux du jour"
-              value={rate}
-              onChangeText={(v) => {
-                setRate(v);
-                clearError('rate');
-              }}
-              keyboardType="decimal-pad"
-              placeholder="250"
-              rightIcon={
-                <Text variant="bodySmall" color="textMuted">
-                  DA / €
-                </Text>
-              }
-              error={errors.rate}
-            />
-          </Stack>
-          <Stack flex={1} gap="xs">
-            <Text variant="label" color="textSecondary">
-              Soit environ
-            </Text>
-            <Row style={{ minHeight: minTouchTarget }}>
-              <Text variant="heading" weight="extrabold" color="textStrong" tabular>
-                {previewDa !== null ? `≈ ${formatAmount(previewDa)}` : '—'}
-              </Text>
-            </Row>
-          </Stack>
-        </Row>
+        <EurRateField
+          rate={rate}
+          onChangeRate={(v) => {
+            setRate(v);
+            clearError('rate');
+          }}
+          previewDa={previewDa}
+          error={errors.rate}
+        />
       )}
 
       <Row gap="md" align="flex-start">
