@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { isOnline } from '@/lib/network';
 import { secureSessionStorage } from '@/lib/secureSessionStorage';
 import { AUTH_STORAGE_KEY, supabase } from '@/lib/supabase';
 
@@ -156,9 +157,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     signingOutRef.current = true;
     try {
-      // Révoque la session côté serveur si possible ; hors ligne, échoue sans effacer la session.
-      const { error } = await supabase.auth.signOut({ scope: 'local' });
-      if (error) console.warn('[auth] signOut Supabase', error.name, error.message);
+      // En ligne : révoque la session côté serveur (un échec n'empêche pas la déconnexion).
+      // Hors ligne : aucun appel, qui attendrait un rafraîchissement du token voué à l'échec.
+      if (await isOnline()) {
+        const { error } = await supabase.auth.signOut({ scope: 'local' });
+        if (error) console.warn('[auth] signOut Supabase', error.name, error.message);
+      }
       await secureSessionStorage.removeItem(AUTH_STORAGE_KEY);
       // Pour que le sélecteur de compte réapparaisse à la prochaine connexion.
       await signOutFromGoogle().catch((e: unknown) => console.warn('[auth] signOut Google', e));

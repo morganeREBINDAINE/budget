@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useCallback, useRef, useState, type ComponentProps } from 'react';
+import { useCallback, useState, type ComponentProps } from 'react';
 import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -15,62 +15,46 @@ import {
 } from '@/design-system';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { AppHeader } from '@/features/navigation/AppHeader';
-import { fakeRequest, mockProfile, mockSyncStatuses } from '@/mocks/account';
-import type { SyncStatus } from '@/types/sync';
+import { fakeRequest } from '@/mocks/account';
 
 import { ProfileCard } from './components/ProfileCard';
-import { SyncStatusCard } from './components/SyncStatusCard';
+import { usePendingSyncCount } from './usePendingSyncCount';
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
-const pendingCountOf = (status: SyncStatus) =>
-  status.state === 'synced' ? 0 : status.pendingCount;
+type PendingSyncCount = ReturnType<typeof usePendingSyncCount>;
+
+// Avertissement de la modale de déconnexion (docs/STORAGE.md §4) : les éléments non envoyés
+// restent sur le téléphone et partiront à la prochaine connexion avec ce compte.
+function logoutMessage(pending: PendingSyncCount): string {
+  switch (pending.status) {
+    case 'loading':
+      return 'Vérification des éléments en attente…';
+    case 'error':
+      return 'Impossible de vérifier les éléments en attente. Tes données restent sur ce téléphone.';
+    case 'ready': {
+      const n = pending.count;
+      if (n === 0) return 'Toutes tes données sont synchronisées.';
+      return n > 1
+        ? `${n} éléments pas encore synchronisés. Ils restent sur ce téléphone et seront envoyés à ta prochaine connexion avec ce compte.`
+        : '1 élément pas encore synchronisé. Il reste sur ce téléphone et sera envoyé à ta prochaine connexion avec ce compte.';
+    }
+  }
+}
 
 export function AccountScreen() {
   const { colors, spacing } = useTheme();
-  const { signOut } = useAuth();
-  const [statusIndex, setStatusIndex] = useState(0);
-  const [syncOverride, setSyncOverride] = useState<SyncStatus | null>(null);
+  const { account, signOut } = useAuth();
+  const pendingSync = usePendingSyncCount();
   const [actionError, setActionError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
-  const syncing = useRef(false);
-
-  const status = syncOverride ?? mockSyncStatuses[statusIndex];
-  const pendingCount = pendingCountOf(status);
 
   const icon = (name: IconName, color = colors.primary) => (
     <MaterialCommunityIcons name={name} size={22} color={color} />
   );
-
-  // Phase 2 : un appui sur la carte affiche l'état factice suivant.
-  const nextStatus = useCallback(() => {
-    if (syncing.current) return;
-    setSyncOverride(null);
-    setStatusIndex((i) => (i + 1) % mockSyncStatuses.length);
-  }, []);
-
-  // TODO(phase 6) : vraie synchro.
-  const sync = useCallback(async () => {
-    if (syncing.current) return;
-    syncing.current = true;
-    setSyncOverride({ state: 'syncing', progress: 0.6, pendingCount });
-    try {
-      await fakeRequest(1500);
-      setSyncOverride({ state: 'synced', lastSyncedAt: new Date().toISOString() });
-    } catch {
-      setSyncOverride({
-        state: 'error',
-        message: 'La synchronisation a échoué. Réessaie plus tard.',
-        pendingCount,
-        lastSyncedAt: null,
-      });
-    } finally {
-      syncing.current = false;
-    }
-  }, [pendingCount]);
 
   // TODO(phase 7) : écrire le fichier JSON puis ouvrir la feuille de partage.
   const exportData = useCallback(async () => {
@@ -107,8 +91,8 @@ export function AccountScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <ProfileCard name={mockProfile.name} email={mockProfile.email} />
-        <SyncStatusCard status={status} onSync={sync} onPress={nextStatus} />
+        {/* Carte d'état de synchro réaffichée avec le moteur de synchro (phase 5). */}
+        <ProfileCard name={account?.name ?? null} email={account?.email ?? null} />
 
         <Stack gap="sm">
           <Text variant="label" color="textSecondary">
@@ -170,14 +154,10 @@ export function AccountScreen() {
       <ConfirmDialog
         visible={logoutOpen}
         title="Se déconnecter ?"
-        message={
-          pendingCount > 0
-            ? `${pendingCount} élément${pendingCount > 1 ? 's' : ''} pas encore synchronisé${pendingCount > 1 ? 's' : ''}. ${pendingCount > 1 ? 'Ils restent' : 'Il reste'} sur ce téléphone et ${pendingCount > 1 ? 'seront envoyés' : 'sera envoyé'} à ta prochaine connexion avec ce compte.`
-            : 'Toutes tes données sont synchronisées.'
-        }
+        message={logoutMessage(pendingSync)}
         confirmLabel="Se déconnecter"
         variant="danger"
-        // TODO(phase 6) : synchro tentée avant la déconnexion si en ligne, vrai nombre en attente.
+        // TODO(phase 5) : synchronisation complète tentée avant la déconnexion si en ligne.
         onConfirm={async () => {
           setLogoutError(null);
           try {
