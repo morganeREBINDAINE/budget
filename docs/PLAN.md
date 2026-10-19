@@ -214,7 +214,7 @@ Reste dû = `debts.amount_da − Σ debt_repayments.amount_da`. Reste = 0 → de
     mocks/        # données factices (phase 2)
     db/           # schéma Drizzle, client, migrations (phase 5)
     repositories/ # accès données (phase 5)
-    sync/         # file d'attente + moteur de synchro (phase 6)
+    sync/         # file d'attente + moteur de synchro (phase 5)
     lib/          # montants, dates, conversion EUR
     types/
   ```
@@ -253,42 +253,42 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [x] Vérifier la librairie de connexion Google native recommandée à date (Credential Manager vs `@react-native-google-signin`) et sa compatibilité SDK 57 → `@react-native-google-signin/google-signin` 16.1.5, version gratuite (compatible Expo 52 à 57), version figée.
 - [x] Google Cloud : écran de consentement (Externe, mode Test, scopes `openid` / `email` / `profile`), client OAuth Android (`com.mrebi.budget`, SHA-1 du keystore debug Expo `android/app/debug.keystore`) et client Web ; provider Google activé dans le dashboard Supabase (client Web, nonce vérifié). `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` dans `.env`, validé par `src/lib/env.ts`. Client Android EAS reporté en phase 9.
 - [x] Connexion → ID token → `signInWithIdToken` (`src/features/auth/googleSignIn.ts`, sans plugin Expo : Android seul) ; erreurs affichées sous le bouton, annulation silencieuse.
-- [x] Garde de route basée sur le **compte local persistant** (`docs/STORAGE.md` §4) : pas de compte local → `/login` ; compte local présent → accueil, même hors ligne, token expiré ou session invalidée côté serveur (état « reconnexion requise » exposé pour la phase 6). Seule la déconnexion manuelle ramène à `/login`.
+- [x] Garde de route basée sur le **compte local persistant** (`docs/STORAGE.md` §4) : pas de compte local → `/login` ; compte local présent → accueil, même hors ligne, token expiré ou session invalidée côté serveur (état « reconnexion requise » exposé pour la phase 5). Seule la déconnexion manuelle ramène à `/login`.
 - [x] Rattacher `user_id` aux données locales (`userId` = `auth.uid()`, hook `useUserId()`, transmis à tous les repositories) : les 9 catégories par défaut (ids aléatoires) sont créées par un trigger Supabase à la création du compte (migration `create_default_categories`, comptes existants rattrapés) ; à chaque connexion Google, `src/sync/pullCategories.ts` les récupère dans SQLite (la version la plus récente gagne) avant d'entrer dans l'app, un échec annule la connexion avec une erreur sous le bouton. Pas de seed local ni de clé `seeded`.
-- [ ] Déconnexion manuelle selon `docs/STORAGE.md` §4 : `signOut` Supabase local + `GoogleSignin.signOut()` (sélecteur de compte à la reconnexion), suppression du compte local ; synchro tentée avant si en ligne et avertissement avec le vrai nombre d'éléments en attente (après la phase 6) ; aucune donnée locale ni `sync_queue` supprimée.
+- [ ] Déconnexion manuelle selon `docs/STORAGE.md` §4, sans synchro préalable (reportée en phase 5) : `signOut` Supabase local (aucun appel réseau hors ligne, NetInfo) + `GoogleSignin.signOut()` (sélecteur de compte à la reconnexion), suppression du compte local ; avertissement avec le vrai nombre d'éléments en attente dans `sync_queue` ; aucune donnée locale ni `sync_queue` supprimée. Page Compte : profil du compte connecté, plus de données factices de synchro (carte masquée jusqu'au moteur de synchro).
 
 **Terminé quand** : la connexion Google ouvre une vraie session Supabase, persistante hors ligne, et le `user_id` du compte connecté est disponible dans toute l'app.
 
-## Phase 5 — Données locales (hors ligne)
+## Phase 5 — Socle de données et synchronisation
 
-> Toutes les données sont rattachées au `user_id` du compte Supabase connecté (phases 3 et 4) : aucun identifiant factice.
+> Le moteur de synchro est construit avant les fonctionnalités : chaque repository est écrit une seule fois avec sa file d'attente, et chaque fonctionnalité livrée est aussitôt sauvegardée dans Supabase. Validation de bout en bout sur les catégories. Toutes les données sont rattachées au `user_id` du compte connecté : aucun identifiant factice.
 
 - [x] Schéma Drizzle complet (`categories`, `transactions`, `recurring_payments`, `recurring_occurrences`, `debt_people`, `debts`, `debt_repayments`, `sync_queue`, `settings` par utilisateur) avec contraintes CHECK et index, migration initiale (`npm run db:generate`), migrations au démarrage (`DatabaseProvider`, splash maintenu, écran d'erreur « Réessayer »), Drizzle Studio en dev. Pas de clés étrangères SQL (ordre d'insertion libre pour le pull et l'import).
-- [ ] Repositories : transactions du mois triées par date desc puis `created_at` desc, totaux du mois, totaux par catégorie, CRUD transactions, mise à jour de catégorie, catégorie utilisée → suppression interdite.
-- [ ] `lib/money.ts` : conversion EUR → DA, arrondi, parsing des saisies.
-- [ ] Remplacer les mocks par les données SQLite (requêtes réactives `useLiveQuery`).
-- [ ] Validation des formulaires (montant > 0, taux > 0 si EUR, catégorie requise pour une dépense).
-- [ ] Mémoriser `last_eur_rate` et préremplir le champ taux.
-- [ ] Paiements réguliers : `lib/recurring.ts` (calcul des échéances dues, jour 31 → dernier jour du mois), « J'ai payé » = création de la dépense + de l'occurrence dans une même transaction SQLite. Catégorie utilisée par un paiement régulier → suppression interdite.
-- [ ] Dettes : repositories, création auto de la personne à l'enregistrement, calcul du reste dû, validation (montant > 0, taux > 0 si EUR, remboursement ≤ reste dû, personne requise). Tests unitaires du reste dû et des conversions.
-- [ ] Tests unitaires : conversion, totaux, tri, règle de suppression des catégories, calcul des échéances (mensuel et annuel, mois courts, 29 février, échéances en retard multiples, paiement déjà confirmé).
-
-**Terminé quand** : l'app fonctionne entièrement en mode avion, et les données survivent à un redémarrage.
-
-## Phase 6 — Synchronisation
-
-- [ ] Chaque écriture locale = écriture de la ligne + ajout dans `sync_queue`, dans une même transaction SQLite.
+- [ ] Toast global partagé (`docs/STORAGE.md` §5) : message affiché exactement 3 s, pas de doublon pour une même erreur.
+- [ ] Outil d'écriture commun : écriture de la ligne + ajout dans `sync_queue` dans une même transaction SQLite (`user_id`, `updated_at` client, uuid client à la création, suppression logique `deleted_at`).
+- [ ] Correspondance générique des colonnes SQLite (camelCase) ↔ Supabase (snake_case) par table synchronisée, horodatages normalisés en ISO.
+- [ ] **Pull** générique (généralisation de `pullCategories`) : lignes `updated_at > last_pulled_at` pour toutes les tables, la modification la plus récente gagne (`updated_at`), modifications locales en file jamais écrasées.
 - [ ] **Push** : vider la file dans l'ordre par lots, `upsert` par id (relançable sans doublon), retrait de la file uniquement après succès.
-- [ ] **Pull** : récupérer les lignes `updated_at > last_pulled_at` (restauration après réinstallation).
-- [ ] Conflits : la modification la plus récente gagne (`updated_at`).
-- [ ] Erreurs : nouvelles tentatives avec délais croissants, `last_error` conservée, état « erreur » affiché.
-- [ ] Déclencheurs : démarrage de l'app, retour du réseau (NetInfo), retour au premier plan, après chaque écriture si en ligne, `expo-background-task` (app fermée, ~15 min minimum décidé par Android), bouton « Synchroniser ».
-- [ ] Store d'état de synchro (statut, % = éléments envoyés / total, dernière synchro) relié à la carte Compte.
-- [ ] Verrou anti-exécutions simultanées.
+- [ ] Verrou anti-exécutions simultanées ; erreurs : nouvelles tentatives avec délais croissants, `last_error` conservée, état « erreur » affiché.
+- [ ] Store d'état de synchro (en attente / en cours % = éléments envoyés / total / à jour / erreur, dernière synchro, nb en attente) relié à la carte Compte (réaffichée), bouton « Synchroniser ».
+- [ ] Déclencheurs : démarrage de l'app, retour du réseau (NetInfo), retour au premier plan, après chaque écriture si en ligne.
 - [ ] État « Reconnexion requise » (session invalidée côté serveur) sur la carte Compte, avec bouton « Se reconnecter avec Google » : reconnexion acceptée uniquement pour le même `user_id`, puis reprise de la file sans perte.
-- [ ] Tests unitaires : file d'attente, relance, conflit, interruption en cours de synchro.
+- [ ] Catégories sur données réelles : écrans Catégories et éditeur lus depuis SQLite (`useLiveQuery`), mise à jour via l'outil d'écriture commun, synchronisée vers Supabase.
+- [ ] Déconnexion : synchronisation complète tentée avant si en ligne (loader dans la modale), puis avertissement avec le nombre d'éléments restants.
+- [ ] `expo-background-task` (app fermée, ~15 min minimum décidé par Android).
+- [ ] Tests unitaires : file d'attente, relance, conflit, interruption en cours de synchro, correspondance des colonnes.
 
-**Terminé quand** : des saisies en mode avion apparaissent dans Supabase après le retour du réseau, sans doublon, avec un pourcentage qui progresse.
+**Terminé quand** : une modification de catégorie faite en mode avion apparaît dans Supabase après le retour du réseau, sans doublon, avec un pourcentage qui progresse ; une réinstallation + connexion restaure les données.
+
+## Phase 6 — Fonctionnalités sur données réelles (hors ligne)
+
+> Une fonctionnalité à la fois, complète : repositories (écritures via l'outil commun), requêtes réactives `useLiveQuery` à la place des mocks, validation des formulaires, tests.
+
+- [ ] Accueil + Transactions : transactions du mois triées par date desc puis `created_at` desc, totaux du mois, totaux par catégorie, CRUD transactions ; `lib/money.ts` (conversion EUR → DA, arrondi, parsing des saisies) ; validation (montant > 0, taux > 0 si EUR, catégorie requise pour une dépense) ; mémoriser `last_eur_rate` et préremplir le champ taux. Tests : conversion, totaux, tri.
+- [ ] Paiements réguliers : repositories, `lib/recurring.ts` (calcul des échéances dues, jour 31 → dernier jour du mois), « J'ai payé » = création de la dépense + de l'occurrence dans une même transaction SQLite (et leurs entrées `sync_queue`). Tests : échéances mensuelles et annuelles, mois courts, 29 février, échéances en retard multiples, paiement déjà confirmé.
+- [ ] Dettes : repositories, création auto de la personne à l'enregistrement, calcul du reste dû, validation (montant > 0, taux > 0 si EUR, remboursement ≤ reste dû, personne requise). Tests : reste dû et conversions.
+
+**Terminé quand** : l'app fonctionne entièrement en mode avion, les données survivent à un redémarrage et se synchronisent au retour du réseau.
 
 ## Phase 7 — Export / import JSON
 
@@ -317,7 +317,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [ ] Ajout / modification / suppression d'entrées et de dépenses hors ligne.
 - [ ] Saisie EUR : taux prérempli, montant DA correct.
 - [ ] Totaux, graphique et liste justes, y compris sur un mois vide et sur un mois futur.
-- [ ] Modification d'une catégorie répercutée partout ; suppression d'une catégorie utilisée refusée.
+- [ ] Modification d'une catégorie répercutée partout.
 - [ ] Retour du réseau → synchro avec % puis « à jour » ; données présentes dans Supabase.
 - [ ] Réinstallation + connexion → données restaurées depuis Supabase.
 - [ ] Session invalidée côté serveur → app toujours utilisable, « Reconnexion requise », reconnexion avec le même compte sans perte.
