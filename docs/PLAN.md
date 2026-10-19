@@ -253,9 +253,9 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [x] Vérifier la librairie de connexion Google native recommandée à date (Credential Manager vs `@react-native-google-signin`) et sa compatibilité SDK 57 → `@react-native-google-signin/google-signin` 16.1.5, version gratuite (compatible Expo 52 à 57), version figée.
 - [x] Google Cloud : écran de consentement (Externe, mode Test, scopes `openid` / `email` / `profile`), client OAuth Android (`com.mrebi.budget`, SHA-1 du keystore debug Expo `android/app/debug.keystore`) et client Web ; provider Google activé dans le dashboard Supabase (client Web, nonce vérifié). `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` dans `.env`, validé par `src/lib/env.ts`. Client Android EAS reporté en phase 9.
 - [ ] Connexion → ID token → `signInWithIdToken`.
-- [ ] Garde de route : pas de session → `/login` ; session présente (même hors ligne) → accueil. Hors ligne, le rafraîchissement du token échoue mais la session reste stockée : une session expirée présente dans le stockage compte comme connectée.
+- [ ] Garde de route basée sur le **compte local persistant** (`docs/STORAGE.md` §4) : pas de compte local → `/login` ; compte local présent → accueil, même hors ligne, token expiré ou session invalidée côté serveur (état « reconnexion requise » exposé pour la phase 6). Seule la déconnexion manuelle ramène à `/login`.
 - [ ] Rattacher `user_id` aux données locales à la première connexion (`userId` = `auth.uid()` fourni par la session, transmis à tous les repositories) : seed des 9 catégories par défaut (ids aléatoires) si `settings.seeded` absent pour ce `user_id`, dans une transaction avec `sync_queue`.
-- [ ] Déconnexion : avertir s'il reste des éléments non synchronisés.
+- [ ] Déconnexion manuelle selon `docs/STORAGE.md` §4 : `signOut` Supabase local + `GoogleSignin.signOut()` (sélecteur de compte à la reconnexion), suppression du compte local ; synchro tentée avant si en ligne et avertissement avec le vrai nombre d'éléments en attente (après la phase 6) ; aucune donnée locale ni `sync_queue` supprimée.
 
 **Terminé quand** : la connexion Google ouvre une vraie session Supabase, persistante hors ligne, et le `user_id` du compte connecté est disponible dans toute l'app.
 
@@ -285,6 +285,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [ ] Déclencheurs : démarrage de l'app, retour du réseau (NetInfo), retour au premier plan, après chaque écriture si en ligne, `expo-background-task` (app fermée, ~15 min minimum décidé par Android), bouton « Synchroniser ».
 - [ ] Store d'état de synchro (statut, % = éléments envoyés / total, dernière synchro) relié à la carte Compte.
 - [ ] Verrou anti-exécutions simultanées.
+- [ ] État « Reconnexion requise » (session invalidée côté serveur) sur la carte Compte, avec bouton « Se reconnecter avec Google » : reconnexion acceptée uniquement pour le même `user_id`, puis reprise de la file sans perte.
 - [ ] Tests unitaires : file d'attente, relance, conflit, interruption en cours de synchro.
 
 **Terminé quand** : des saisies en mode avion apparaissent dans Supabase après le retour du réseau, sans doublon, avec un pourcentage qui progresse.
@@ -319,6 +320,8 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [ ] Modification d'une catégorie répercutée partout ; suppression d'une catégorie utilisée refusée.
 - [ ] Retour du réseau → synchro avec % puis « à jour » ; données présentes dans Supabase.
 - [ ] Réinstallation + connexion → données restaurées depuis Supabase.
+- [ ] Session invalidée côté serveur → app toujours utilisable, « Reconnexion requise », reconnexion avec le même compte sans perte.
+- [ ] Déconnexion avec éléments en attente → reconnexion avec le même compte → éléments envoyés ; un autre compte ne voit pas ces données.
 - [ ] Export JSON → import → données identiques.
 - [ ] Paiement régulier : encart rouge le jour J, toujours visible les jours suivants, disparition après « J'ai payé » + confirmation, dépense créée dans le bon mois.
 - [ ] Une erreur provoquée remonte dans Sentry.
