@@ -39,3 +39,9 @@ Modèle hors ligne d'abord, aligné sur `docs/PLAN.md` (phases 3 et 6).
 - Avant toute modification, examiner le schéma Drizzle, les migrations, les repositories, la file de synchro et le système de toast existants ; réutiliser les mécanismes existants.
 - Une écriture locale n'est déclarée réussie qu'après validation de la transaction SQLite ; une synchronisation n'est déclarée réussie qu'après confirmation de Supabase.
 - Tests unitaires pour les règles métier (conversions, totaux, échéances, reste dû) et la file de synchro (relance, conflit, interruption).
+
+## 6. Supabase CLI et migrations distantes
+
+- Supabase est toujours installé dans le projet (Supabase CLI en devDependency, dossier `supabase/` initialisé via `supabase init` et versionné).
+- Toute modification du schéma distant (tables, colonnes, index, RLS, fonctions) passe par un fichier de migration SQL enregistré dans `supabase/migrations/` (créé via `supabase migration new <nom>`), jamais par une modification manuelle dans le dashboard.
+- Ces migrations Supabase sont distinctes des migrations Drizzle de la base SQLite locale ; tout changement de schéma qui touche les données synchronisées doit être reflété des deux côtés.
