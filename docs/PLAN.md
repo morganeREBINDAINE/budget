@@ -251,7 +251,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 ## Phase 4 — Authentification Google
 
 - [x] Vérifier la librairie de connexion Google native recommandée à date (Credential Manager vs `@react-native-google-signin`) et sa compatibilité SDK 57 → `@react-native-google-signin/google-signin` 16.1.5, version gratuite (compatible Expo 52 à 57), version figée.
-- [ ] Google Cloud : client OAuth Android (SHA-1 debug + EAS) et client Web ; activer le provider Google dans Supabase.
+- [x] Google Cloud : écran de consentement (Externe, mode Test, scopes `openid` / `email` / `profile`), client OAuth Android (`com.mrebi.budget`, SHA-1 du keystore debug Expo `android/app/debug.keystore`) et client Web ; provider Google activé dans le dashboard Supabase (client Web, nonce vérifié). `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` dans `.env`, validé par `src/lib/env.ts`. Client Android EAS reporté en phase 9.
 - [ ] Connexion → ID token → `signInWithIdToken`.
 - [ ] Garde de route : pas de session → `/login` ; session présente (même hors ligne) → accueil. Hors ligne, le rafraîchissement du token échoue mais la session reste stockée : une session expirée présente dans le stockage compte comme connectée.
 - [ ] Rattacher `user_id` aux données locales à la première connexion (`userId` = `auth.uid()` fourni par la session, transmis à tous les repositories) : seed des 9 catégories par défaut (ids aléatoires) si `settings.seeded` absent pour ce `user_id`, dans une transaction avec `sync_queue`.
@@ -305,7 +305,8 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 ## Phase 9 — Build et livraison
 
 - [ ] `eas.json` : profils `development` et `production` (APK).
-- [ ] Secrets EAS (Supabase, Sentry).
+- [ ] Google Cloud : second client OAuth Android avec la SHA-1 du keystore EAS (`eas credentials`), sinon la connexion Google échoue (`DEVELOPER_ERROR`) dans l'APK EAS.
+- [ ] Secrets EAS (Supabase, Google Web Client ID, Sentry).
 - [ ] EAS Update configuré (canal `production`).
 - [ ] Installer l'APK sur le téléphone et passer la checklist de recette.
 

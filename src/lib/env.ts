@@ -26,7 +26,19 @@ if (supabasePublishableKey.startsWith('sb_secret_')) {
   );
 }
 
+// Client OAuth de type Web (pas Android) : requis pour obtenir l'idToken. Identifiant public.
+const googleWebClientId = required(
+  'EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID',
+  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+);
+if (!googleWebClientId.endsWith('.apps.googleusercontent.com')) {
+  throw new Error(
+    'EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID invalide : doit se terminer par .apps.googleusercontent.com.',
+  );
+}
+
 export const env = {
   supabaseUrl,
   supabasePublishableKey,
+  googleWebClientId,
 } as const;
