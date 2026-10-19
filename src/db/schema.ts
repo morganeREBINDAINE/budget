@@ -136,7 +136,11 @@ export const recurringOccurrences = sqliteTable(
     ...timestamps,
   },
   (t) => [
-    uniqueIndex('recurring_occurrences_payment_due_unique').on(t.recurringPaymentId, t.dueDate),
+    uniqueIndex('recurring_occurrences_payment_due_unique').on(
+      t.userId,
+      t.recurringPaymentId,
+      t.dueDate,
+    ),
     index('recurring_occurrences_user_updated_idx').on(t.userId, t.updatedAt),
   ],
 );

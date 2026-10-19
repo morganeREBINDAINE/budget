@@ -1,0 +1,2 @@
+DROP INDEX `recurring_occurrences_payment_due_unique`;--> statement-breakpoint
+CREATE UNIQUE INDEX `recurring_occurrences_payment_due_unique` ON `recurring_occurrences` (`user_id`,`recurring_payment_id`,`due_date`);
