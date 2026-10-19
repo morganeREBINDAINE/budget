@@ -176,6 +176,7 @@ Reste dû = `debts.amount_da − Σ debt_repayments.amount_da`. Reste = 0 → de
 | Base locale             | `expo-sqlite` + Drizzle ORM (source de vérité de l'UI)                                                    |
 | Backend                 | Supabase (Postgres + Auth) via `@supabase/supabase-js`                                                    |
 | Auth Google             | Connexion native → ID token → `supabase.auth.signInWithIdToken` (librairie exacte à confirmer en phase 4) |
+| Session auth            | `expo-secure-store` (clé AES) + session chiffrée (`expo-crypto` AES-GCM) dans un kv-store `expo-sqlite`        |
 | Réseau                  | `@react-native-community/netinfo`                                                                         |
 | Synchro en arrière-plan | `expo-background-task` (+ synchro au premier plan au retour du réseau)                                    |
 | Graphique               | `react-native-svg` (anneau dessiné à la main)                                                             |
@@ -245,14 +246,14 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [x] Migration SQL (`supabase/migrations/`, CLI Supabase en devDependency) : tables `categories`, `transactions`, `recurring_payments`, `recurring_occurrences`, `debt_people`, `debts`, `debt_repayments` (mêmes colonnes et CHECK que SQLite, pas de clés étrangères entre tables, `updated_at` géré par le client), index sur `(user_id, updated_at)`.
 - [x] RLS + politiques `user_id = auth.uid()` (select / insert / update ; pas de delete, suppression logique).
 - [x] Variables d'environnement `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (clé `sb_publishable_…`) : `.env` ignoré par Git, `.env.example` versionné, lecture et validation dans `src/lib/env.ts` (erreur explicite si manquante).
-- [ ] Client Supabase avec stockage de session persistant (session lisible hors ligne).
+- [x] Client Supabase avec stockage de session persistant (session lisible hors ligne) : `src/lib/supabase.ts` (versions figées, `detectSessionInUrl: false`), session chiffrée AES-GCM (`expo-crypto`) dans un kv-store SQLite dédié avec la clé dans `expo-secure-store` (`src/lib/secureSessionStorage.ts`), rafraîchissement du token au premier plan uniquement (`SupabaseAutoRefresh`).
 
 ## Phase 4 — Authentification Google
 
 - [ ] Vérifier la librairie de connexion Google native recommandée à date (Credential Manager vs `@react-native-google-signin`) et sa compatibilité SDK 57.
 - [ ] Google Cloud : client OAuth Android (SHA-1 debug + EAS) et client Web ; activer le provider Google dans Supabase.
 - [ ] Connexion → ID token → `signInWithIdToken`.
-- [ ] Garde de route : pas de session → `/login` ; session présente (même hors ligne) → accueil.
+- [ ] Garde de route : pas de session → `/login` ; session présente (même hors ligne) → accueil. Hors ligne, le rafraîchissement du token échoue mais la session reste stockée : une session expirée présente dans le stockage compte comme connectée.
 - [ ] Rattacher `user_id` aux données locales à la première connexion (`userId` = `auth.uid()` fourni par la session, transmis à tous les repositories) : seed des 9 catégories par défaut (ids aléatoires) si `settings.seeded` absent pour ce `user_id`, dans une transaction avec `sync_queue`.
 - [ ] Déconnexion : avertir s'il reste des éléments non synchronisés.
 

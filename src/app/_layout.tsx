@@ -16,6 +16,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { DatabaseProvider } from '@/db/DatabaseProvider';
 import { ThemeProvider, useTheme } from '@/design-system';
 import { MockSessionProvider, useSession } from '@/features/auth/MockSession';
+import { SupabaseAutoRefresh } from '@/features/auth/SupabaseAutoRefresh';
 import { DatabaseErrorScreen } from '@/features/db/DatabaseErrorScreen';
 
 SplashScreen.preventAutoHideAsync();
@@ -38,6 +39,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <SupabaseAutoRefresh />
       <KeyboardProvider>
         <ThemeProvider>
           <DatabaseProvider onSettled={hideSplash} ErrorScreen={DatabaseErrorScreen}>
