@@ -233,12 +233,12 @@ export const syncQueue = sqliteTable(
   (t) => [index('sync_queue_user_created_idx').on(t.userId, t.createdAt)],
 );
 
-// Réglages clé/valeur par utilisateur : last_eur_rate, last_pulled_at, seeded.
+// Réglages clé/valeur par utilisateur : last_eur_rate, last_pulled_at.
 export const settings = sqliteTable(
   'settings',
   {
     userId: text('user_id').notNull(),
-    key: text('key', { enum: ['last_eur_rate', 'last_pulled_at', 'seeded'] }).notNull(),
+    key: text('key', { enum: ['last_eur_rate', 'last_pulled_at'] }).notNull(),
     value: text('value').notNull(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.key] })],

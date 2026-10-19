@@ -63,7 +63,7 @@ iOS · multilingue / i18n (textes en français écrits en dur) · thème sombre 
 | created_at / updated_at | timestamptz      |                                                           |
 | deleted_at              | timestamptz null | suppression logique (interdite si catégorie utilisée)     |
 
-Catégories par défaut : voiture, factures, maison, hanout, khaddar, boucherie, neyla, assya, loisirs.
+Catégories par défaut : Voiture, Factures, Maison, Hanout, Khaddar, Boucherie, Neyla, Assya, Loisirs — créées une seule fois par Supabase à la création du compte (trigger sur `auth.users`), puis récupérées dans SQLite à chaque connexion Google.
 
 **`transactions`**
 
@@ -164,7 +164,7 @@ Reste dû = `debts.amount_da − Σ debt_repayments.amount_da`. Reste = 0 → de
 **Tables locales uniquement (SQLite)**
 
 - `sync_queue` : id, table_name, row_id, op (`upsert`), payload JSON, attempts, last_error, created_at.
-- `settings` : clé/valeur — `last_eur_rate`, `last_pulled_at`, `seeded`.
+- `settings` : clé/valeur — `last_eur_rate`, `last_pulled_at`.
 
 **Supabase** : RLS activé sur toutes les tables synchronisées (`categories`, `transactions`, `recurring_payments`, `recurring_occurrences`, `debt_people`, `debts`, `debt_repayments`), politique `user_id = auth.uid()` pour select/insert/update.
 
@@ -254,7 +254,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [x] Google Cloud : écran de consentement (Externe, mode Test, scopes `openid` / `email` / `profile`), client OAuth Android (`com.mrebi.budget`, SHA-1 du keystore debug Expo `android/app/debug.keystore`) et client Web ; provider Google activé dans le dashboard Supabase (client Web, nonce vérifié). `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` dans `.env`, validé par `src/lib/env.ts`. Client Android EAS reporté en phase 9.
 - [x] Connexion → ID token → `signInWithIdToken` (`src/features/auth/googleSignIn.ts`, sans plugin Expo : Android seul) ; erreurs affichées sous le bouton, annulation silencieuse.
 - [x] Garde de route basée sur le **compte local persistant** (`docs/STORAGE.md` §4) : pas de compte local → `/login` ; compte local présent → accueil, même hors ligne, token expiré ou session invalidée côté serveur (état « reconnexion requise » exposé pour la phase 6). Seule la déconnexion manuelle ramène à `/login`.
-- [ ] Rattacher `user_id` aux données locales à la première connexion (`userId` = `auth.uid()` fourni par la session, transmis à tous les repositories) : seed des 9 catégories par défaut (ids aléatoires) si `settings.seeded` absent pour ce `user_id`, dans une transaction avec `sync_queue`.
+- [x] Rattacher `user_id` aux données locales (`userId` = `auth.uid()`, hook `useUserId()`, transmis à tous les repositories) : les 9 catégories par défaut (ids aléatoires) sont créées par un trigger Supabase à la création du compte (migration `create_default_categories`, comptes existants rattrapés) ; à chaque connexion Google, `src/sync/pullCategories.ts` les récupère dans SQLite (la version la plus récente gagne) avant d'entrer dans l'app, un échec annule la connexion avec une erreur sous le bouton. Pas de seed local ni de clé `seeded`.
 - [ ] Déconnexion manuelle selon `docs/STORAGE.md` §4 : `signOut` Supabase local + `GoogleSignin.signOut()` (sélecteur de compte à la reconnexion), suppression du compte local ; synchro tentée avant si en ligne et avertissement avec le vrai nombre d'éléments en attente (après la phase 6) ; aucune donnée locale ni `sync_queue` supprimée.
 
 **Terminé quand** : la connexion Google ouvre une vraie session Supabase, persistante hors ligne, et le `user_id` du compte connecté est disponible dans toute l'app.

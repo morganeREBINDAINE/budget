@@ -37,7 +37,9 @@ type AuthContextValue = {
   status: AuthState['status'];
   account: LocalAccount | null;
   needsReauth: boolean;
-  signInWithGoogle: () => Promise<SignInResult>;
+  // `prepareAccount` : préparation des données locales du compte (ex. récupération des catégories),
+  // exécutée avant que le compte ne soit considéré connecté ; un échec annule la connexion.
+  signInWithGoogle: (prepareAccount: (userId: string) => Promise<void>) => Promise<SignInResult>;
   signOut: () => Promise<void>;
 };
 
@@ -119,22 +121,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [setNeedsReauth]);
 
-  const signInWithGoogle = useCallback(async (): Promise<SignInResult> => {
-    const result = await googleSignIn();
-    if (result.type !== 'success') return result;
+  const signInWithGoogle = useCallback(
+    async (prepareAccount: (userId: string) => Promise<void>): Promise<SignInResult> => {
+      const result = await googleSignIn();
+      if (result.type !== 'success') return result;
 
-    const account = accountFromUser(result.user);
-    try {
-      await saveLocalAccount(account);
-    } catch (e) {
-      console.error('[auth] enregistrement du compte local impossible', e);
-      await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
-      return { type: 'error', message: 'Impossible d’enregistrer le compte sur ce téléphone.' };
-    }
-    accountRef.current = account;
-    setState({ status: 'signedIn', account, needsReauth: false });
-    return { type: 'success' };
-  }, []);
+      const account = accountFromUser(result.user);
+      try {
+        await prepareAccount(account.id);
+      } catch (e) {
+        console.error('[auth] préparation des données du compte impossible', e);
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+        await signOutFromGoogle().catch(() => undefined);
+        return {
+          type: 'error',
+          message: 'Impossible de récupérer tes catégories. Vérifie ta connexion et réessaie.',
+        };
+      }
+      try {
+        await saveLocalAccount(account);
+      } catch (e) {
+        console.error('[auth] enregistrement du compte local impossible', e);
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+        return { type: 'error', message: 'Impossible d’enregistrer le compte sur ce téléphone.' };
+      }
+      accountRef.current = account;
+      setState({ status: 'signedIn', account, needsReauth: false });
+      return { type: 'success' };
+    },
+    [],
+  );
 
   // Déconnexion manuelle : aucune donnée locale ni sync_queue n'est supprimée (docs/STORAGE.md §4).
   const signOut = useCallback(async () => {
@@ -166,6 +182,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+/** `user_id` du compte connecté, à transmettre à tous les repositories. */
+export function useUserId(): string {
+  const { account } = useAuth();
+  if (!account) throw new Error('useUserId doit être utilisé avec un compte connecté');
+  return account.id;
 }
 
 export function useAuth(): AuthContextValue {
