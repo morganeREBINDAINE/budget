@@ -39,6 +39,12 @@ function toRow(remote: RemoteCategory): NewCategoryRow {
 
 /** Récupère les catégories du compte depuis Supabase et les enregistre en local. */
 export async function pullCategories(db: Database, userId: string): Promise<void> {
+  // Sans session, la requête partirait en `anon` et serait refusée (42501) : erreur explicite.
+  const { data: auth, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw new Error(`Lecture de la session impossible (${sessionError.name})`);
+  if (!auth.session) throw new Error('Session absente');
+  if (auth.session.user.id !== userId) throw new Error('Session d’un autre compte');
+
   const { data, error } = await supabase
     .from('categories')
     .select(COLUMNS)
