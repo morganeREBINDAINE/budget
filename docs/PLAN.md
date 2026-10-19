@@ -31,17 +31,17 @@ iOS · multilingue / i18n (textes en français écrits en dur) · thème sombre 
 
 ### Écrans
 
-| Écran                | Route                                                                    | Contenu                                                                                                                                                                                                                          |
-| -------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Connexion            | `/(auth)/login`                                                          | Logo, bouton « Continuer avec Google »                                                                                                                                                                                           |
-| Accueil              | `/(app)/index`                                                           | Barre haute (icône burger à gauche, logo centré, icône export), sélecteur de mois ‹ Mois Année ›, cartes Entrées / Dépenses, graphique par catégorie, section « Détail », 2 boutons flottants « Ajouter entrée » / « Ajouter dépense » |
-| Transaction          | `/(app)/transaction/new?type=income\|expense`, `/(app)/transaction/[id]` | Montant + devise (DA / EUR), taux si EUR, date (aujourd'hui par défaut), catégorie (dépense seulement), note facultative, bouton Enregistrer (+ Supprimer en modification)                                                       |
-| Compte               | `/(app)/account`                                                         | Profil Google, état de synchro (en attente / en cours % / à jour / erreur, dernière synchro, nb d'éléments en attente, bouton « Synchroniser »), lien Catégories, Exporter / Importer JSON, Déconnexion                          |
-| Catégories           | `/(app)/categories`                                                      | Liste des 9 catégories (icône, couleur, nom)                                                                                                                                                                                     |
-| Éditeur de catégorie | `/(app)/categories/[id]`                                                 | Nom, palette de couleurs (arc-en-ciel), grille d'icônes Material Community Icons (blanches sur fond de couleur)                                                                                                                                                               |
-| Paiements réguliers  | `/(app)/recurring`                                                       | Liste des paiements réguliers (nom, montant, catégorie, prochaine échéance), bouton flottant « + » ; écran principal du menu burger                                                                                            |
-| Éditeur de paiement  | `/(app)/recurring/new`, `/(app)/recurring/[id]`                          | Nom, montant en DA, catégorie, fréquence (mensuel / annuel), jour du mois (1–31) + mois si annuel, date de début, actif oui/non, note ; bouton Enregistrer (+ Supprimer en modification)                                                                                        |
-| Dettes               | `/(app)/debts`                                                           | Onglets « Je dois » / « On me doit », total restant dû par onglet, liste des dettes (personne, montant, reste dû, date, badge « soldée »), bouton « Ajouter » |
+| Écran                | Route                                                                    | Contenu                                                                                                                                                                                                                                                                                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Connexion            | `/(auth)/login`                                                          | Logo, bouton « Continuer avec Google »                                                                                                                                                                                                                                                                                                                                              |
+| Accueil              | `/(app)/index`                                                           | Barre haute (icône burger à gauche, logo centré, icône export), sélecteur de mois ‹ Mois Année ›, cartes Entrées / Dépenses, graphique par catégorie, section « Détail », 2 boutons flottants « Ajouter entrée » / « Ajouter dépense »                                                                                                                                              |
+| Transaction          | `/(app)/transaction/new?type=income\|expense`, `/(app)/transaction/[id]` | Montant + devise (DA / EUR), taux si EUR, date (aujourd'hui par défaut), catégorie (dépense seulement), note facultative, bouton Enregistrer (+ Supprimer en modification)                                                                                                                                                                                                          |
+| Compte               | `/(app)/account`                                                         | Profil Google, état de synchro (en attente / en cours % / à jour / erreur, dernière synchro, nb d'éléments en attente, bouton « Synchroniser »), lien Catégories, Exporter / Importer JSON, Déconnexion                                                                                                                                                                             |
+| Catégories           | `/(app)/categories`                                                      | Liste des 9 catégories (icône, couleur, nom)                                                                                                                                                                                                                                                                                                                                        |
+| Éditeur de catégorie | `/(app)/categories/[id]`                                                 | Nom, palette de couleurs (arc-en-ciel), grille d'icônes Material Community Icons (blanches sur fond de couleur)                                                                                                                                                                                                                                                                     |
+| Paiements réguliers  | `/(app)/recurring`                                                       | Liste des paiements réguliers (nom, montant, catégorie, prochaine échéance), bouton flottant « + » ; écran principal du menu burger                                                                                                                                                                                                                                                 |
+| Éditeur de paiement  | `/(app)/recurring/new`, `/(app)/recurring/[id]`                          | Nom, montant en DA, catégorie, fréquence (mensuel / annuel), jour du mois (1–31) + mois si annuel, date de début, actif oui/non, note ; bouton Enregistrer (+ Supprimer en modification)                                                                                                                                                                                            |
+| Dettes               | `/(app)/debts`                                                           | Onglets « Je dois » / « On me doit », total restant dû par onglet, liste des dettes (personne, montant, reste dû, date, badge « soldée »), bouton « Ajouter »                                                                                                                                                                                                                       |
 | Éditeur de dette     | `/(app)/debts/new`, `/(app)/debts/[id]`                                  | Sens fixé par l'onglet d'origine (non modifiable), personne (champ avec autocomplétion des noms enregistrés), montant + devise (DA / EUR), taux du jour si EUR, date, note ; en modification : liste des remboursements (appui → modifier / supprimer) + « Ajouter un remboursement » (feuille `/(app)/repayment/new?debtId=` : montant, devise/taux, date, note), bouton Supprimer |
 
 **Menu burger** : icône en haut à gauche de la barre haute ; ouvre un tiroir qui glisse depuis la gauche avec Budget (`/(app)/index`), Paiements réguliers (`/(app)/recurring`), Dettes (`/(app)/debts`) et Mon compte (`/(app)/account`).
@@ -86,78 +86,78 @@ Catégories par défaut : voiture, factures, maison, hanout, khaddar, boucherie,
 
 **`recurring_payments`**
 
-| Champ                   | Type             | Règles                                                                 |
-| ----------------------- | ---------------- | ---------------------------------------------------------------------- |
-| id                      | uuid             | clé primaire, généré sur le client                                     |
-| user_id                 | uuid             | = `auth.uid()`                                                         |
-| name                    | text             | requis, non vide                                                       |
-| amount_da               | int              | > 0                                                                    |
-| category_id             | uuid             | requis                                                                 |
-| frequency               | text             | `monthly` \| `yearly`                                                  |
-| day_of_month            | int              | 1–31 ; si le mois est plus court, échéance au dernier jour du mois     |
+| Champ                   | Type             | Règles                                                                      |
+| ----------------------- | ---------------- | --------------------------------------------------------------------------- |
+| id                      | uuid             | clé primaire, généré sur le client                                          |
+| user_id                 | uuid             | = `auth.uid()`                                                              |
+| name                    | text             | requis, non vide                                                            |
+| amount_da               | int              | > 0                                                                         |
+| category_id             | uuid             | requis                                                                      |
+| frequency               | text             | `monthly` \| `yearly`                                                       |
+| day_of_month            | int              | 1–31 ; si le mois est plus court, échéance au dernier jour du mois          |
 | month                   | int null         | 1–12, requis si `yearly`, null si `monthly` (29/02 → 28/02 hors bissextile) |
-| start_date              | date             | première échéance possible                                             |
-| active                  | bool             | inactif = plus d'encart                                                |
-| note                    | text null        | facultative                                                            |
-| created_at / updated_at | timestamptz      |                                                                        |
-| deleted_at              | timestamptz null | suppression logique                                                    |
+| start_date              | date             | première échéance possible                                                  |
+| active                  | bool             | inactif = plus d'encart                                                     |
+| note                    | text null        | facultative                                                                 |
+| created_at / updated_at | timestamptz      |                                                                             |
+| deleted_at              | timestamptz null | suppression logique                                                         |
 
 **`recurring_occurrences`** (une ligne par échéance payée)
 
-| Champ                   | Type        | Règles                                                   |
-| ----------------------- | ----------- | -------------------------------------------------------- |
-| id                      | uuid        | clé primaire                                             |
-| user_id                 | uuid        | = `auth.uid()`                                           |
-| recurring_payment_id    | uuid        |                                                          |
-| due_date                | date        | unique avec `recurring_payment_id`                       |
-| paid_at                 | date        | date de paiement confirmée                               |
-| transaction_id          | uuid        | dépense créée lors de la confirmation                    |
-| created_at / updated_at | timestamptz |                                                          |
+| Champ                   | Type        | Règles                                |
+| ----------------------- | ----------- | ------------------------------------- |
+| id                      | uuid        | clé primaire                          |
+| user_id                 | uuid        | = `auth.uid()`                        |
+| recurring_payment_id    | uuid        |                                       |
+| due_date                | date        | unique avec `recurring_payment_id`    |
+| paid_at                 | date        | date de paiement confirmée            |
+| transaction_id          | uuid        | dépense créée lors de la confirmation |
+| created_at / updated_at | timestamptz |                                       |
 
 Échéances dues = toutes les dates d'échéance calculées entre `start_date` et aujourd'hui, sans ligne dans `recurring_occurrences` (calcul côté client, rien n'est pré-généré).
 
 **`debt_people`** (noms enregistrés pour l'autocomplétion)
 
-| Champ                   | Type             | Règles                                       |
-| ----------------------- | ---------------- | -------------------------------------------- |
-| id                      | uuid             | clé primaire, généré sur le client           |
-| user_id                 | uuid             | = `auth.uid()`                               |
+| Champ                   | Type             | Règles                                                           |
+| ----------------------- | ---------------- | ---------------------------------------------------------------- |
+| id                      | uuid             | clé primaire, généré sur le client                               |
+| user_id                 | uuid             | = `auth.uid()`                                                   |
 | name                    | text             | requis, non vide, unique par utilisateur (insensible à la casse) |
-| created_at / updated_at | timestamptz      |                                              |
-| deleted_at              | timestamptz null | suppression logique                          |
+| created_at / updated_at | timestamptz      |                                                                  |
+| deleted_at              | timestamptz null | suppression logique                                              |
 
 Un nom saisi qui n'existe pas encore est créé automatiquement à l'enregistrement de la dette.
 
 **`debts`**
 
-| Champ                   | Type             | Règles                                                     |
-| ----------------------- | ---------------- | ---------------------------------------------------------- |
-| id                      | uuid             | clé primaire, généré sur le client                         |
-| user_id                 | uuid             | = `auth.uid()`                                             |
-| direction               | text             | `i_owe` (je dois) \| `owed_to_me` (on me doit)             |
-| person_id               | uuid             | → `debt_people`, requis                                    |
-| amount_da               | int              | > 0, montant final en dinars entiers                       |
-| currency                | text             | `DZD` \| `EUR`                                             |
-| original_amount_cents   | int null         | montant EUR saisi (centimes), si `currency = EUR`          |
-| eur_rate                | numeric null     | taux DA/EUR du jour saisi, si `currency = EUR`             |
-| date                    | date             | date de la dette                                           |
-| note                    | text null        | facultative                                                |
-| created_at / updated_at | timestamptz      |                                                            |
-| deleted_at              | timestamptz null | suppression logique                                        |
+| Champ                   | Type             | Règles                                            |
+| ----------------------- | ---------------- | ------------------------------------------------- |
+| id                      | uuid             | clé primaire, généré sur le client                |
+| user_id                 | uuid             | = `auth.uid()`                                    |
+| direction               | text             | `i_owe` (je dois) \| `owed_to_me` (on me doit)    |
+| person_id               | uuid             | → `debt_people`, requis                           |
+| amount_da               | int              | > 0, montant final en dinars entiers              |
+| currency                | text             | `DZD` \| `EUR`                                    |
+| original_amount_cents   | int null         | montant EUR saisi (centimes), si `currency = EUR` |
+| eur_rate                | numeric null     | taux DA/EUR du jour saisi, si `currency = EUR`    |
+| date                    | date             | date de la dette                                  |
+| note                    | text null        | facultative                                       |
+| created_at / updated_at | timestamptz      |                                                   |
+| deleted_at              | timestamptz null | suppression logique                               |
 
 **`debt_repayments`** (remboursements partiels)
 
-| Champ                   | Type             | Règles                                                |
-| ----------------------- | ---------------- | ----------------------------------------------------- |
-| id                      | uuid             | clé primaire, généré sur le client                    |
-| user_id                 | uuid             | = `auth.uid()`                                        |
-| debt_id                 | uuid             | → `debts`                                             |
-| amount_da               | int              | > 0, ≤ reste dû                                       |
-| currency / original_amount_cents / eur_rate | | mêmes règles que `debts`                    |
-| date                    | date             | aujourd'hui par défaut                                |
-| note                    | text null        | facultative                                           |
-| created_at / updated_at | timestamptz      |                                                       |
-| deleted_at              | timestamptz null | suppression logique                                   |
+| Champ                                       | Type             | Règles                             |
+| ------------------------------------------- | ---------------- | ---------------------------------- |
+| id                                          | uuid             | clé primaire, généré sur le client |
+| user_id                                     | uuid             | = `auth.uid()`                     |
+| debt_id                                     | uuid             | → `debts`                          |
+| amount_da                                   | int              | > 0, ≤ reste dû                    |
+| currency / original_amount_cents / eur_rate |                  | mêmes règles que `debts`           |
+| date                                        | date             | aujourd'hui par défaut             |
+| note                                        | text null        | facultative                        |
+| created_at / updated_at                     | timestamptz      |                                    |
+| deleted_at                                  | timestamptz null | suppression logique                |
 
 Reste dû = `debts.amount_da − Σ debt_repayments.amount_da`. Reste = 0 → dette « soldée ». **Aucun lien avec le budget** : ni les dettes ni les remboursements ne créent de transaction.
 
@@ -170,21 +170,21 @@ Reste dû = `debts.amount_da − Σ debt_repayments.amount_da`. Reste = 0 → de
 
 ### Stack
 
-| Rôle                    | Choix                                                                                                     |
-| ----------------------- | --------------------------------------------------------------------------------------------------------- |
-| Framework               | Expo **SDK 57** (React Native 0.86, React 19.2), TypeScript, Expo Router                                  |
-| Base locale             | `expo-sqlite` + Drizzle ORM (source de vérité de l'UI)                                                    |
-| Backend                 | Supabase (Postgres + Auth) via `@supabase/supabase-js`                                                    |
-| Auth Google             | Connexion native → ID token → `supabase.auth.signInWithIdToken` (librairie exacte à confirmer en phase 4) |
-| Session auth            | `expo-secure-store` (clé AES) + session chiffrée (`expo-crypto` AES-GCM) dans un kv-store `expo-sqlite`        |
-| Réseau                  | `@react-native-community/netinfo`                                                                         |
-| Synchro en arrière-plan | `expo-background-task` (+ synchro au premier plan au retour du réseau)                                    |
-| Graphique               | `react-native-svg` (anneau dessiné à la main)                                                             |
-| Icônes                  | `@expo/vector-icons` (MaterialCommunityIcons)                                                             |
-| Export / import         | `expo-file-system`, `expo-sharing`, `expo-document-picker`                                                |
-| Monitoring              | `@sentry/react-native`                                                                                    |
-| Tests                   | Jest (`jest-expo`)                                                                                        |
-| Build                   | `npx expo run:android` (dev), EAS Build → APK, EAS Update                                                 |
+| Rôle                    | Choix                                                                                                                              |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Framework               | Expo **SDK 57** (React Native 0.86, React 19.2), TypeScript, Expo Router                                                           |
+| Base locale             | `expo-sqlite` + Drizzle ORM (source de vérité de l'UI)                                                                             |
+| Backend                 | Supabase (Postgres + Auth) via `@supabase/supabase-js`                                                                             |
+| Auth Google             | `@react-native-google-signin/google-signin` 16.1.5 (version gratuite, API Original) → ID token → `supabase.auth.signInWithIdToken` |
+| Session auth            | `expo-secure-store` (clé AES) + session chiffrée (`expo-crypto` AES-GCM) dans un kv-store `expo-sqlite`                            |
+| Réseau                  | `@react-native-community/netinfo`                                                                                                  |
+| Synchro en arrière-plan | `expo-background-task` (+ synchro au premier plan au retour du réseau)                                                             |
+| Graphique               | `react-native-svg` (anneau dessiné à la main)                                                                                      |
+| Icônes                  | `@expo/vector-icons` (MaterialCommunityIcons)                                                                                      |
+| Export / import         | `expo-file-system`, `expo-sharing`, `expo-document-picker`                                                                         |
+| Monitoring              | `@sentry/react-native`                                                                                                             |
+| Tests                   | Jest (`jest-expo`)                                                                                                                 |
+| Build                   | `npx expo run:android` (dev), EAS Build → APK, EAS Update                                                                          |
 
 ---
 
@@ -250,7 +250,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 
 ## Phase 4 — Authentification Google
 
-- [ ] Vérifier la librairie de connexion Google native recommandée à date (Credential Manager vs `@react-native-google-signin`) et sa compatibilité SDK 57.
+- [x] Vérifier la librairie de connexion Google native recommandée à date (Credential Manager vs `@react-native-google-signin`) et sa compatibilité SDK 57 → `@react-native-google-signin/google-signin` 16.1.5, version gratuite (compatible Expo 52 à 57), version figée.
 - [ ] Google Cloud : client OAuth Android (SHA-1 debug + EAS) et client Web ; activer le provider Google dans Supabase.
 - [ ] Connexion → ID token → `signInWithIdToken`.
 - [ ] Garde de route : pas de session → `/login` ; session présente (même hors ligne) → accueil. Hors ligne, le rafraîchissement du token échoue mais la session reste stockée : une session expirée présente dans le stockage compte comme connectée.
@@ -342,7 +342,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 
 - **Design Stitch pas encore lu** : forme du graphique, couleurs et logo à confirmer en phase 0.
 - **Pause des projets Supabase gratuits** après ~7 jours d'inactivité : la synchro échoue jusqu'à réactivation.
-- **Librairie de connexion Google** : la version gratuite de `@react-native-google-signin` s'appuierait sur une API Android dépréciée — à trancher en phase 4.
+- **Librairie de connexion Google** : la version gratuite de `@react-native-google-signin` s'appuie sur le SDK Android Google Sign-In legacy, déprécié mais fonctionnel. S'il est retiré : migrer vers la version Universal (payante, Credential Manager, même API JS) ou une alternative Credential Manager.
 - **Environnement Android local** requis pour `npx expo run:android`.
 - **Synchro app fermée** limitée par Android (≥ 15 min, sans garantie).
 - **Perte du téléphone** avant synchro ou export = perte des données non envoyées.
