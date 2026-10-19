@@ -96,7 +96,7 @@ create table public.recurring_occurrences (
 );
 
 create unique index recurring_occurrences_payment_due_unique
-  on public.recurring_occurrences (recurring_payment_id, due_date);
+  on public.recurring_occurrences (user_id, recurring_payment_id, due_date);
 create index recurring_occurrences_user_updated_idx
   on public.recurring_occurrences (user_id, updated_at);
 

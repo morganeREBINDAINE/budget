@@ -45,3 +45,4 @@ Modèle hors ligne d'abord, aligné sur `docs/PLAN.md` (phases 3 et 6).
 - Supabase est toujours installé dans le projet (Supabase CLI en devDependency, dossier `supabase/` initialisé via `supabase init` et versionné).
 - Toute modification du schéma distant (tables, colonnes, index, RLS, fonctions) passe par un fichier de migration SQL enregistré dans `supabase/migrations/` (créé via `supabase migration new <nom>`), jamais par une modification manuelle dans le dashboard.
 - Ces migrations Supabase sont distinctes des migrations Drizzle de la base SQLite locale ; tout changement de schéma qui touche les données synchronisées doit être reflété des deux côtés.
+- Toute contrainte d’unicité (index unique, clé unique) sur une table synchronisée inclut user_id en première colonne, côté Supabase et SQLite. Une ligne d’un utilisateur ne doit jamais pouvoir bloquer ou entrer en conflit avec celle d’un autre.
