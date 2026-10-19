@@ -244,7 +244,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 
 - [x] Migration SQL (`supabase/migrations/`, CLI Supabase en devDependency) : tables `categories`, `transactions`, `recurring_payments`, `recurring_occurrences`, `debt_people`, `debts`, `debt_repayments` (mêmes colonnes et CHECK que SQLite, pas de clés étrangères entre tables, `updated_at` géré par le client), index sur `(user_id, updated_at)`.
 - [x] RLS + politiques `user_id = auth.uid()` (select / insert / update ; pas de delete, suppression logique).
-- [ ] Variables d'environnement `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
+- [x] Variables d'environnement `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (clé `sb_publishable_…`) : `.env` ignoré par Git, `.env.example` versionné, lecture et validation dans `src/lib/env.ts` (erreur explicite si manquante).
 - [ ] Client Supabase avec stockage de session persistant (session lisible hors ligne).
 
 ## Phase 4 — Authentification Google
