@@ -9,13 +9,13 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { DatabaseProvider } from '@/db/DatabaseProvider';
 import { ThemeProvider, useTheme } from '@/design-system';
-import { MockSessionProvider, useSession } from '@/features/auth/MockSession';
+import { AuthProvider, useAuth } from '@/features/auth/AuthProvider';
 import { SupabaseAutoRefresh } from '@/features/auth/SupabaseAutoRefresh';
 import { DatabaseErrorScreen } from '@/features/db/DatabaseErrorScreen';
 
@@ -30,10 +30,9 @@ export default function RootLayout() {
     PlusJakartaSans_800ExtraBold,
   });
 
-  // Le splash reste affiché jusqu'à ce que la base soit prête (ou en erreur).
-  const hideSplash = useCallback(() => {
-    void SplashScreen.hideAsync();
-  }, []);
+  // Le splash reste affiché jusqu'à ce que la base soit prête (ou en erreur) et le compte local lu.
+  const [dbSettled, setDbSettled] = useState(false);
+  const markDbSettled = useCallback(() => setDbSettled(true), []);
 
   if (!loaded && !error) return null;
 
@@ -42,20 +41,33 @@ export default function RootLayout() {
       <SupabaseAutoRefresh />
       <KeyboardProvider>
         <ThemeProvider>
-          <DatabaseProvider onSettled={hideSplash} ErrorScreen={DatabaseErrorScreen}>
-            <MockSessionProvider>
+          <AuthProvider>
+            <SplashGate dbSettled={dbSettled} />
+            <DatabaseProvider onSettled={markDbSettled} ErrorScreen={DatabaseErrorScreen}>
               <RootStack />
-            </MockSessionProvider>
-          </DatabaseProvider>
+            </DatabaseProvider>
+          </AuthProvider>
         </ThemeProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }
 
+function SplashGate({ dbSettled }: { dbSettled: boolean }) {
+  const { status } = useAuth();
+  const ready = dbSettled && status !== 'loading';
+  useEffect(() => {
+    if (ready) void SplashScreen.hideAsync();
+  }, [ready]);
+  return null;
+}
+
+// Garde de route : connecté = compte local présent (docs/STORAGE.md §4), même hors ligne.
 function RootStack() {
   const { colors } = useTheme();
-  const { signedIn } = useSession();
+  const { status } = useAuth();
+  if (status === 'loading') return null;
+  const signedIn = status === 'signedIn';
   return (
     <>
       <StatusBar style="dark" />

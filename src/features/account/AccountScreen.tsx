@@ -13,7 +13,7 @@ import {
   Text,
   useTheme,
 } from '@/design-system';
-import { useSession } from '@/features/auth/MockSession';
+import { useAuth } from '@/features/auth/AuthProvider';
 import { AppHeader } from '@/features/navigation/AppHeader';
 import { fakeRequest, mockProfile, mockSyncStatuses } from '@/mocks/account';
 import type { SyncStatus } from '@/types/sync';
@@ -28,13 +28,14 @@ const pendingCountOf = (status: SyncStatus) =>
 
 export function AccountScreen() {
   const { colors, spacing } = useTheme();
-  const { signOut } = useSession();
+  const { signOut } = useAuth();
   const [statusIndex, setStatusIndex] = useState(0);
   const [syncOverride, setSyncOverride] = useState<SyncStatus | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
   const syncing = useRef(false);
 
   const status = syncOverride ?? mockSyncStatuses[statusIndex];
@@ -171,16 +172,26 @@ export function AccountScreen() {
         title="Se déconnecter ?"
         message={
           pendingCount > 0
-            ? `${pendingCount} élément${pendingCount > 1 ? 's' : ''} pas encore synchronisé${pendingCount > 1 ? 's' : ''} : ${pendingCount > 1 ? 'ils seront perdus' : 'il sera perdu'} si tu te déconnectes.`
+            ? `${pendingCount} élément${pendingCount > 1 ? 's' : ''} pas encore synchronisé${pendingCount > 1 ? 's' : ''}. ${pendingCount > 1 ? 'Ils restent' : 'Il reste'} sur ce téléphone et ${pendingCount > 1 ? 'seront envoyés' : 'sera envoyé'} à ta prochaine connexion avec ce compte.`
             : 'Toutes tes données sont synchronisées.'
         }
         confirmLabel="Se déconnecter"
         variant="danger"
-        onConfirm={() => {
-          setLogoutOpen(false);
-          signOut();
+        // TODO(phase 6) : synchro tentée avant la déconnexion si en ligne, vrai nombre en attente.
+        onConfirm={async () => {
+          setLogoutError(null);
+          try {
+            await signOut();
+          } catch (e) {
+            console.error('[auth] déconnexion impossible', e);
+            setLogoutError('La déconnexion a échoué. Réessaie.');
+          }
         }}
-        onCancel={() => setLogoutOpen(false)}
+        onCancel={() => {
+          setLogoutOpen(false);
+          setLogoutError(null);
+        }}
+        error={logoutError}
       />
     </SafeAreaView>
   );

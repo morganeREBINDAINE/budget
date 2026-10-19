@@ -1,14 +1,24 @@
+import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, screenPadding, Stack, Text, useTheme } from '@/design-system';
 import { AppLogo } from '@/features/brand/AppLogo';
 
+import { useAuth } from './AuthProvider';
 import { GoogleLogo } from './GoogleLogo';
-import { useSession } from './MockSession';
 
 export function LoginScreen() {
   const { colors, spacing } = useTheme();
-  const { signIn } = useSession();
+  const { signInWithGoogle } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+
+  // Promise renvoyée à Button : spinner et garde contre les doubles appuis.
+  // En cas de succès, la garde de route (_layout) mène à l'accueil.
+  const handleSignIn = async () => {
+    setError(null);
+    const result = await signInWithGoogle();
+    if (result.type === 'error') setError(result.message);
+  };
 
   return (
     <SafeAreaView
@@ -26,15 +36,21 @@ export function LoginScreen() {
           Suivez votre budget, même hors ligne
         </Text>
       </Stack>
-      {/* TODO(phase 5) : connexion Google native → signInWithIdToken. */}
-      <Button
-        label="Continuer avec Google"
-        variant="outline"
-        size="lg"
-        fullWidth
-        leftIcon={<GoogleLogo />}
-        onPress={signIn}
-      />
+      <Stack gap="sm">
+        {error ? (
+          <Text variant="bodySmall" color="danger" align="center" accessibilityLiveRegion="polite">
+            {error}
+          </Text>
+        ) : null}
+        <Button
+          label="Continuer avec Google"
+          variant="outline"
+          size="lg"
+          fullWidth
+          leftIcon={<GoogleLogo />}
+          onPress={handleSignIn}
+        />
+      </Stack>
     </SafeAreaView>
   );
 }
