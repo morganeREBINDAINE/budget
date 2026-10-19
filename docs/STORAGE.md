@@ -1,6 +1,6 @@
 # Règle — SQLite local source de vérité, Supabase sauvegarde synchronisée
 
-Modèle hors ligne d'abord, aligné sur `docs/PLAN.md` (phases 3 et 6).
+Modèle hors ligne d'abord, aligné sur `docs/PLAN.md` (phases 5 et 6).
 
 ## 1. Principes
 

@@ -175,7 +175,7 @@ Reste dû = `debts.amount_da − Σ debt_repayments.amount_da`. Reste = 0 → de
 | Framework               | Expo **SDK 57** (React Native 0.86, React 19.2), TypeScript, Expo Router                                  |
 | Base locale             | `expo-sqlite` + Drizzle ORM (source de vérité de l'UI)                                                    |
 | Backend                 | Supabase (Postgres + Auth) via `@supabase/supabase-js`                                                    |
-| Auth Google             | Connexion native → ID token → `supabase.auth.signInWithIdToken` (librairie exacte à confirmer en phase 5) |
+| Auth Google             | Connexion native → ID token → `supabase.auth.signInWithIdToken` (librairie exacte à confirmer en phase 4) |
 | Réseau                  | `@react-native-community/netinfo`                                                                         |
 | Synchro en arrière-plan | `expo-background-task` (+ synchro au premier plan au retour du réseau)                                    |
 | Graphique               | `react-native-svg` (anneau dessiné à la main)                                                             |
@@ -211,8 +211,8 @@ Reste dû = `debts.amount_da − Σ debt_repayments.amount_da`. Reste = 0 → de
     design-system/ # tokens, thème, primitives, composants UI génériques
     features/     # composants et écrans métier, par fonctionnalité
     mocks/        # données factices (phase 2)
-    db/           # schéma Drizzle, client, migrations (phase 3)
-    repositories/ # accès données (phase 3)
+    db/           # schéma Drizzle, client, migrations (phase 5)
+    repositories/ # accès données (phase 5)
     sync/         # file d'attente + moteur de synchro (phase 6)
     lib/          # montants, dates, conversion EUR
     types/
@@ -240,9 +240,27 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 
 **Terminé quand** : chaque écran correspond au design avec des données factices, et tous les parcours se cliquent de bout en bout.
 
-## Phase 3 — Données locales (hors ligne)
+## Phase 3 — Supabase (backend)
 
-> Ordre d’exécution : après le schéma, réaliser les phases 4 (Supabase) et 5 (Auth Google), puis reprendre la suite de cette phase avec le `user_id` du compte connecté.
+- [x] Migration SQL (`supabase/migrations/`, CLI Supabase en devDependency) : tables `categories`, `transactions`, `recurring_payments`, `recurring_occurrences`, `debt_people`, `debts`, `debt_repayments` (mêmes colonnes et CHECK que SQLite, pas de clés étrangères entre tables, `updated_at` géré par le client), index sur `(user_id, updated_at)`.
+- [x] RLS + politiques `user_id = auth.uid()` (select / insert / update ; pas de delete, suppression logique).
+- [ ] Variables d'environnement `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
+- [ ] Client Supabase avec stockage de session persistant (session lisible hors ligne).
+
+## Phase 4 — Authentification Google
+
+- [ ] Vérifier la librairie de connexion Google native recommandée à date (Credential Manager vs `@react-native-google-signin`) et sa compatibilité SDK 57.
+- [ ] Google Cloud : client OAuth Android (SHA-1 debug + EAS) et client Web ; activer le provider Google dans Supabase.
+- [ ] Connexion → ID token → `signInWithIdToken`.
+- [ ] Garde de route : pas de session → `/login` ; session présente (même hors ligne) → accueil.
+- [ ] Rattacher `user_id` aux données locales à la première connexion (`userId` = `auth.uid()` fourni par la session, transmis à tous les repositories) : seed des 9 catégories par défaut (ids aléatoires) si `settings.seeded` absent pour ce `user_id`, dans une transaction avec `sync_queue`.
+- [ ] Déconnexion : avertir s'il reste des éléments non synchronisés.
+
+**Terminé quand** : la connexion Google ouvre une vraie session Supabase, persistante hors ligne, et le `user_id` du compte connecté est disponible dans toute l'app.
+
+## Phase 5 — Données locales (hors ligne)
+
+> Toutes les données sont rattachées au `user_id` du compte Supabase connecté (phases 3 et 4) : aucun identifiant factice.
 
 - [x] Schéma Drizzle complet (`categories`, `transactions`, `recurring_payments`, `recurring_occurrences`, `debt_people`, `debts`, `debt_repayments`, `sync_queue`, `settings` par utilisateur) avec contraintes CHECK et index, migration initiale (`npm run db:generate`), migrations au démarrage (`DatabaseProvider`, splash maintenu, écran d'erreur « Réessayer »), Drizzle Studio en dev. Pas de clés étrangères SQL (ordre d'insertion libre pour le pull et l'import).
 - [ ] Repositories : transactions du mois triées par date desc puis `created_at` desc, totaux du mois, totaux par catégorie, CRUD transactions, mise à jour de catégorie, catégorie utilisée → suppression interdite.
@@ -255,22 +273,6 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [ ] Tests unitaires : conversion, totaux, tri, règle de suppression des catégories, calcul des échéances (mensuel et annuel, mois courts, 29 février, échéances en retard multiples, paiement déjà confirmé).
 
 **Terminé quand** : l'app fonctionne entièrement en mode avion, et les données survivent à un redémarrage.
-
-## Phase 4 — Supabase (backend)
-
-- [x] Migration SQL (`supabase/migrations/`, CLI Supabase en devDependency) : tables `categories`, `transactions`, `recurring_payments`, `recurring_occurrences`, `debt_people`, `debts`, `debt_repayments` (mêmes colonnes et CHECK que SQLite, pas de clés étrangères entre tables, `updated_at` géré par le client), index sur `(user_id, updated_at)`.
-- [x] RLS + politiques `user_id = auth.uid()` (select / insert / update ; pas de delete, suppression logique).
-- [ ] Variables d'environnement `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
-- [ ] Client Supabase avec stockage de session persistant (session lisible hors ligne).
-
-## Phase 5 — Authentification Google
-
-- [ ] Vérifier la librairie de connexion Google native recommandée à date (Credential Manager vs `@react-native-google-signin`) et sa compatibilité SDK 57.
-- [ ] Google Cloud : client OAuth Android (SHA-1 debug + EAS) et client Web ; activer le provider Google dans Supabase.
-- [ ] Connexion → ID token → `signInWithIdToken`.
-- [ ] Garde de route : pas de session → `/login` ; session présente (même hors ligne) → accueil.
-- [ ] Rattacher `user_id` aux données locales à la première connexion : seed des 9 catégories par défaut (ids aléatoires) si `settings.seeded` absent pour ce `user_id`, dans une transaction avec `sync_queue`.
-- [ ] Déconnexion : avertir s'il reste des éléments non synchronisés.
 
 ## Phase 6 — Synchronisation
 
@@ -339,7 +341,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 
 - **Design Stitch pas encore lu** : forme du graphique, couleurs et logo à confirmer en phase 0.
 - **Pause des projets Supabase gratuits** après ~7 jours d'inactivité : la synchro échoue jusqu'à réactivation.
-- **Librairie de connexion Google** : la version gratuite de `@react-native-google-signin` s'appuierait sur une API Android dépréciée — à trancher en phase 5.
+- **Librairie de connexion Google** : la version gratuite de `@react-native-google-signin` s'appuierait sur une API Android dépréciée — à trancher en phase 4.
 - **Environnement Android local** requis pour `npx expo run:android`.
 - **Synchro app fermée** limitée par Android (≥ 15 min, sans garantie).
 - **Perte du téléphone** avant synchro ou export = perte des données non envoyées.
