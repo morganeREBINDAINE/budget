@@ -39,7 +39,9 @@ async function getItemNow(key: string): Promise<string | null> {
   if (!encrypted || !hexKey) return null;
   try {
     const aesKey = await AESEncryptionKey.import(hexKey, 'hex');
-    const bytes = await aesDecryptAsync(AESSealedData.fromCombined(encrypted), aesKey);
+    // Le module natif Android n'accepte que des octets pour fromCombined (pas de base64).
+    const sealedBytes = Uint8Array.from(atob(encrypted), (char) => char.charCodeAt(0));
+    const bytes = await aesDecryptAsync(AESSealedData.fromCombined(sealedBytes), aesKey);
     return fromBytes(bytes);
   } catch (e) {
     console.warn('[auth] session illisible, supprimée', e);
