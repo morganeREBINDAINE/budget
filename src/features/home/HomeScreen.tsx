@@ -23,7 +23,7 @@ export function HomeScreen() {
   const [duePayments, setDuePayments] = useState<DuePayment[]>(mockDuePayments);
   const [paying, setPaying] = useState<DuePayment | null>(null);
   // Pendant le pull initial : skeletons, et actions bloquées par un garde dans chaque handler.
-  const { status, ready, retry } = useInitialPull();
+  const { ready, failed } = useInitialPull();
 
   const addIncome = useCallback(() => {
     if (!ready) return;
@@ -75,7 +75,7 @@ export function HomeScreen() {
       {ready ? (
         <MonthPager month={month} onChange={setMonth} renderPage={renderPage} />
       ) : (
-        <HomeSkeleton month={month} onRetry={status === 'error' ? retry : undefined} />
+        <HomeSkeleton month={month} failed={failed} />
       )}
       <FabGroup onAddIncome={addIncome} onAddExpense={addExpense} />
       <PayDueDialog

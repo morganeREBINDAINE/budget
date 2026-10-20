@@ -60,7 +60,9 @@ export function AccountScreen() {
   // Après un envoi incomplet avant déconnexion : raison affichée, second appui = déconnexion.
   const [logoutBlocked, setLogoutBlocked] = useState<string | null>(null);
   // Synchronisation, export et import bloqués pendant le pull initial (garde dans les handlers).
-  const { ready } = useInitialPull();
+  // Session refusée pendant le pull : la carte passe en « Reconnexion requise ».
+  const { status: pullStatus, ready } = useInitialPull();
+  const pullNeedsReauth = pullStatus === 'reauth';
   const db = useDatabase();
   const userId = useUserId();
   const { status: syncStatus, sync, reconnect, reconnectError } = useSyncStatus();
@@ -71,9 +73,9 @@ export function AccountScreen() {
   }, [ready, sync]);
 
   const reconnectAccount = useCallback(async () => {
-    if (!ready) return;
+    if (!ready && !pullNeedsReauth) return;
     await reconnect();
-  }, [ready, reconnect]);
+  }, [ready, pullNeedsReauth, reconnect]);
 
   // Déconnexion (docs/STORAGE.md §4) : premier appui = envoi de la file si elle n'est pas vide
   // (hors ligne : aucun appel). S'il reste des éléments, la modale reste ouverte avec la raison et
@@ -145,7 +147,7 @@ export function AccountScreen() {
       >
         <ProfileCard name={account?.name ?? null} email={account?.email ?? null} />
         <SyncStatusCard
-          status={ready ? syncStatus : null}
+          status={ready || pullNeedsReauth ? syncStatus : null}
           onSync={syncData}
           onReconnect={reconnectAccount}
           reconnectError={reconnectError}

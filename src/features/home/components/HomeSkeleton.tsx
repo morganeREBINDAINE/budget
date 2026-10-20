@@ -16,14 +16,14 @@ import { formatMonth, type YearMonth } from '@/lib/format';
 
 type Props = {
   month: YearMonth;
-  // Absent : chargement (skeletons) ; présent : échec du pull (bloc d'erreur « Réessayer »).
-  onRetry?: () => Promise<void>;
+  // Échec du pull : bloc d'erreur (« Réessayer » ou reconnexion) à la place des skeletons.
+  failed?: boolean;
 };
 
 const CHART_SIZE = 200;
 
 // Contenu d'un mois pendant le pull initial : mêmes blocs que MonthPage, données remplacées.
-export function HomeSkeleton({ month, onRetry }: Props) {
+export function HomeSkeleton({ month, failed = false }: Props) {
   const { spacing } = useTheme();
   return (
     <ScrollView
@@ -34,8 +34,8 @@ export function HomeSkeleton({ month, onRetry }: Props) {
       }}
       showsVerticalScrollIndicator={false}
     >
-      {onRetry ? (
-        <InitialPullError onRetry={onRetry} />
+      {failed ? (
+        <InitialPullError />
       ) : (
         <LoadingRegion gap="xl">
           <Row gap="md" align="stretch">

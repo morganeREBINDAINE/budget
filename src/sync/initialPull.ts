@@ -4,6 +4,7 @@ import { hasLocalCategories } from '@/repositories/remoteRows';
 import { getSetting } from '@/repositories/settings';
 import { pendingSyncCount } from '@/repositories/syncQueue';
 import { pullFromSupabase } from '@/sync/pull';
+import { SessionError } from '@/sync/session';
 import { syncNow } from '@/sync/syncNow';
 
 // Pull initial d'un compte (store sans React) : lancé à chaque connexion Google, et au démarrage
@@ -12,8 +13,11 @@ import { syncNow } from '@/sync/syncNow';
 // « Réessayer » ; les actions qui dépendent des données sont bloquées. Une fois les données
 // récupérées, les éléments laissés en file par une session précédente du compte partent en
 // arrière-plan (docs/STORAGE.md §4).
+//
+// Session refusée (ex. app fermée avant la fin du pull, puis session perdue) : statut `reauth`,
+// le bloc d'erreur propose « Se reconnecter avec Google » ; aucune relance automatique.
 
-export type InitialPullStatus = 'loading' | 'error' | 'ready';
+export type InitialPullStatus = 'loading' | 'error' | 'reauth' | 'ready';
 
 type State = { userId: string; status: InitialPullStatus } | null;
 
@@ -63,7 +67,8 @@ async function runInitialPull(db: Database, userId: string): Promise<void> {
     if (state?.userId === userId) setState({ userId, status: 'ready' });
   } catch (e) {
     console.error('[sync] pull initial impossible', e);
-    if (state?.userId === userId) setState({ userId, status: 'error' });
+    const status = e instanceof SessionError ? 'reauth' : 'error';
+    if (state?.userId === userId) setState({ userId, status });
     return;
   }
   if (pendingSyncCount(db, userId) > 0) void pushPendingInBackground(db, userId);
@@ -86,4 +91,13 @@ export function resumeInitialPull(db: Database, userId: string): void {
   if (getInitialPullStatus(userId) !== null) return;
   if (hasPulledOnce(db, userId)) setState({ userId, status: 'ready' });
   else void startInitialPull(db, userId);
+}
+
+/**
+ * Après une reconnexion réussie : relance le pull initial s'il n'a pas abouti (il envoie ensuite la
+ * file), sinon reprend la synchronisation. Ne rejette jamais.
+ */
+export async function resumeAfterReconnect(db: Database, userId: string): Promise<void> {
+  if (getInitialPullStatus(userId) === 'ready') await syncNow(db, userId);
+  else await startInitialPull(db, userId);
 }

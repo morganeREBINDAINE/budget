@@ -1,10 +1,12 @@
 import { and, eq } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 
 import { useDatabase } from '@/db/DatabaseProvider';
 import { settings } from '@/db/schema';
 import { useAuth, useUserId } from '@/features/auth/AuthProvider';
+import { useInitialPull } from '@/features/sync/useInitialPull';
+import { useReconnect } from '@/features/sync/useReconnect';
 import { rejectedSyncCountQuery, requeueRejectedEntries } from '@/repositories/syncQueue';
 import { getSyncRunState, subscribeSyncRun, syncNow, type SyncResult } from '@/sync/syncNow';
 import type { SyncStatus } from '@/types/sync';
@@ -30,15 +32,16 @@ export type SyncStatusController = {
 
 /**
  * État de la carte de synchro du compte connecté : synchronisation en cours (store), reconnexion
- * requise (session refusée), nombre d'éléments en attente et mis de côté, date de la dernière
+ * requise (session refusée, y compris pendant le pull initial), nombre d'éléments en attente et mis de côté, date de la dernière
  * synchro (requêtes SQLite en direct).
  */
 export function useSyncStatus(): SyncStatusController {
   const db = useDatabase();
   const userId = useUserId();
-  const { account, needsReauth, reauthenticate } = useAuth();
+  const { account, needsReauth } = useAuth();
   const run = useSyncExternalStore(subscribeSyncRun, () => getSyncRunState(userId));
-  const [reconnectError, setReconnectError] = useState<string | null>(null);
+  const { status: pullStatus } = useInitialPull();
+  const { reconnect, error: reconnectError } = useReconnect();
   const pending = usePendingSyncCount();
 
   const lastSyncedQuery = useMemo(
@@ -62,15 +65,6 @@ export function useSyncStatus(): SyncStatusController {
     return syncNow(db, userId);
   }, [db, userId]);
 
-  // Reconnexion acceptée uniquement pour le même compte, puis la file reprend sans perte.
-  const reconnect = useCallback(async () => {
-    setReconnectError(null);
-    const result = await reauthenticate();
-    if (result.type === 'error') setReconnectError(result.message);
-    if (result.type !== 'success') return;
-    await syncNow(db, userId);
-  }, [db, userId, reauthenticate]);
-
   let status: SyncStatus | null;
   if (pending.status === 'loading') {
     status = null;
@@ -84,7 +78,7 @@ export function useSyncStatus(): SyncStatusController {
     };
   } else if (run?.running) {
     status = { state: 'syncing', progress: run.progress, pendingCount: pending.count };
-  } else if (needsReauth || run?.sessionRefused) {
+  } else if (needsReauth || run?.sessionRefused || pullStatus === 'reauth') {
     status = {
       state: 'reauth',
       email: account?.email ?? null,

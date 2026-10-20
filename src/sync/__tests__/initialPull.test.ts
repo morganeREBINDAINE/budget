@@ -42,12 +42,15 @@ const addCategory = (db: Database, userId = USER) =>
 
 // Store module : rechargé à chaque test pour repartir d'un état vide.
 let store: typeof import('@/sync/initialPull');
+// Chargée avec le store : `instanceof` ne reconnaît que la classe du même registre de modules.
+let SessionError: typeof import('@/sync/session').SessionError;
 let db: Database;
 let close: () => void;
 
 beforeEach(() => {
   jest.isolateModules(() => {
     store = jest.requireActual<typeof import('@/sync/initialPull')>('@/sync/initialPull');
+    ({ SessionError } = jest.requireActual<typeof import('@/sync/session')>('@/sync/session'));
   });
   ({ db, close } = createTestDatabase());
   pull.mockReset();
@@ -78,6 +81,15 @@ describe('startInitialPull', () => {
     pull.mockImplementation(async () => addCategory(db));
     await store.startInitialPull(db, USER);
     expect(store.getInitialPullStatus(USER)).toBe('ready');
+  });
+
+  it('demande une reconnexion si la session est refusée, sans envoyer la file', async () => {
+    insertRow(db, 'debt_people', USER, { name: 'Karim' });
+    pull.mockRejectedValue(new SessionError('Session absente'));
+    await store.startInitialPull(db, USER);
+    await flush();
+    expect(store.getInitialPullStatus(USER)).toBe('reauth');
+    expect(sync).not.toHaveBeenCalled();
   });
 
   it('passe en erreur si aucune catégorie n’a été récupérée', async () => {
@@ -183,5 +195,26 @@ describe('resumeInitialPull', () => {
     store.resumeInitialPull(db, USER);
     expect(pull).toHaveBeenCalledTimes(1);
     expect(store.getInitialPullStatus(USER)).toBe('error');
+  });
+});
+
+describe('resumeAfterReconnect', () => {
+  it('relance le pull initial refusé faute de session, puis le compte est prêt', async () => {
+    pull.mockRejectedValueOnce(new SessionError('Session absente'));
+    await store.startInitialPull(db, USER);
+    pull.mockImplementation(async () => addCategory(db));
+    await store.resumeAfterReconnect(db, USER);
+    expect(pull).toHaveBeenCalledTimes(2);
+    expect(store.getInitialPullStatus(USER)).toBe('ready');
+    expect(sync).not.toHaveBeenCalled();
+  });
+
+  it('reprend la synchronisation si le compte est déjà récupéré', async () => {
+    setSetting(db, USER, 'last_pulled_at', '2026-10-20T10:00:00+00:00');
+    store.resumeInitialPull(db, USER);
+    sync.mockResolvedValue({ ok: true });
+    await store.resumeAfterReconnect(db, USER);
+    expect(sync).toHaveBeenCalledWith(db, USER);
+    expect(pull).not.toHaveBeenCalled();
   });
 });

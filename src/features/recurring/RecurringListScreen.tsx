@@ -38,7 +38,7 @@ export function RecurringListScreen() {
   const payments = useMemo(() => sortPayments(mockRecurringPayments), []);
   const categoriesById = useMemo(() => new Map(mockCategories.map((c) => [c.id, c])), []);
   // Pendant le pull initial : skeletons, et actions bloquées par un garde dans chaque handler.
-  const { status, ready, retry } = useInitialPull();
+  const { ready, failed } = useInitialPull();
   const addPayment = () => {
     if (!ready) return;
     router.push('/recurring/new');
@@ -81,8 +81,8 @@ export function RecurringListScreen() {
           </Stack>
         }
         ListEmptyComponent={
-          status === 'error' ? (
-            <InitialPullError onRetry={retry} />
+          failed ? (
+            <InitialPullError />
           ) : !ready ? (
             <LoadingRegion>
               <RowSkeletonList />

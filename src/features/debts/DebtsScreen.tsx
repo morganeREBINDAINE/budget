@@ -43,7 +43,7 @@ export function DebtsScreen() {
   const [settledOpen, setSettledOpen] = useState(false);
   const { active, settled, totalRemainingDa } = useDebts(direction);
   // Pendant le pull initial : skeletons, et actions bloquées par un garde dans chaque handler.
-  const { status, ready, retry } = useInitialPull();
+  const { ready, failed } = useInitialPull();
 
   const sections: Section[] = !ready
     ? []
@@ -79,8 +79,8 @@ export function DebtsScreen() {
         keyExtractor={(i) => i.debt.id}
         renderItem={renderItem}
         ListHeaderComponent={
-          status === 'error' ? (
-            <InitialPullError onRetry={retry} />
+          failed ? (
+            <InitialPullError />
           ) : !ready ? (
             <LoadingRegion>
               <TotalRemainingSkeleton direction={direction} />

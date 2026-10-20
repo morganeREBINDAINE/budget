@@ -13,7 +13,8 @@ import { requestSync, type SyncTrigger } from '@/sync/syncNow';
 // intervalle minimal au premier plan) sont appliquées par `requestSync`.
 //
 // Tant que le pull initial du compte n'a pas réussi, aucune synchronisation : il s'en charge. S'il
-// a échoué, le retour du réseau et le retour au premier plan le relancent (si en ligne).
+// a échoué, le retour du réseau et le retour au premier plan le relancent (si en ligne), sauf si la
+// session a été refusée (`reauth`) : rien jusqu'à la reconnexion.
 
 /** Délai de regroupement des écritures avant l'envoi (relancé à chaque nouvelle écriture). */
 export const WRITE_DEBOUNCE_MS = 2_000;

@@ -28,7 +28,7 @@ const CATEGORY_COUNT = 9;
 export function CategoriesScreen() {
   const { colors, spacing } = useTheme();
   const categories = [...mockCategories].sort((a, b) => a.position - b.position);
-  const { status, ready, retry } = useInitialPull();
+  const { ready, failed } = useInitialPull();
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
@@ -47,8 +47,8 @@ export function CategoriesScreen() {
         <Text variant="bodySmall" color="textSecondary">
           Touche une catégorie pour changer son nom, sa couleur ou son icône.
         </Text>
-        {status === 'error' ? (
-          <InitialPullError onRetry={retry} />
+        {failed ? (
+          <InitialPullError />
         ) : !ready ? (
           <LoadingRegion>
             <Card padding="xs">

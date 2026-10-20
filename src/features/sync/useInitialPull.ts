@@ -14,6 +14,8 @@ export type InitialPull = {
   status: InitialPullStatus;
   // Données du compte disponibles : à vérifier dans les handlers des actions qui en dépendent.
   ready: boolean;
+  // Pull échoué (`error` ou `reauth`) : bloc d'erreur à la place des skeletons.
+  failed: boolean;
   // Relance le pull (Promise : spinner et garde du bouton « Réessayer »).
   retry: () => Promise<void>;
 };
@@ -30,5 +32,10 @@ export function useInitialPull(): InitialPull {
   );
   const status = known ?? fallback;
   const retry = useCallback(() => startInitialPull(db, userId), [db, userId]);
-  return { status, ready: status === 'ready', retry };
+  return {
+    status,
+    ready: status === 'ready',
+    failed: status === 'error' || status === 'reauth',
+    retry,
+  };
 }

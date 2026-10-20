@@ -166,6 +166,18 @@ describe('startAutoSync', () => {
     expect(initialPull).not.toHaveBeenCalled();
   });
 
+  it('session refusée pendant le pull initial : rien n’est relancé avant la reconnexion', async () => {
+    await start('reauth');
+    network(false);
+    network(true);
+    emitAppState('background');
+    emitAppState('active');
+    notifyLocalWrite(USER);
+    await jest.advanceTimersByTimeAsync(WRITE_DEBOUNCE_MS);
+    expect(initialPull).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
+  });
+
   it('arrêt : désabonne tout et annule l’envoi des écritures en attente', async () => {
     const stop = await start();
     request.mockClear();
