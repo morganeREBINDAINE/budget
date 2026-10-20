@@ -15,6 +15,13 @@
       "when": 1792407681042,
       "tag": "0001_scope_occurrence_unique_per_user",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792500658335,
+      "tag": "0002_sync_queue_rejected_at",
+      "breakpoints": true
     }
   ]
 }

@@ -14,7 +14,7 @@ import {
   type BadgeVariant,
   type ThemeColor,
 } from '@/design-system';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, formatTime } from '@/lib/format';
 import type { SyncStatus } from '@/types/sync';
 
 type Props = {
@@ -142,6 +142,11 @@ function SyncDetail({ status }: { status: SyncStatus }) {
           <Text variant="bodySmall" color="danger">
             {status.message}
           </Text>
+          {status.nextRetryAt ? (
+            <Text variant="bodySmall" color="textSecondary">
+              Nouvel essai automatique vers {formatTime(status.nextRetryAt)}
+            </Text>
+          ) : null}
           <Text variant="bodySmall" color="textMuted">
             {lastSyncText(status.lastSyncedAt)}
           </Text>

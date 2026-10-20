@@ -1,0 +1,1 @@
+ALTER TABLE `sync_queue` ADD `rejected_at` text;

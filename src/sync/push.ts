@@ -1,11 +1,13 @@
 import type { Database } from '@/db/client';
-import type { SyncedTableName } from '@/db/schema';
+import type { SyncedTableName, SyncQueueRow } from '@/db/schema';
 import { supabase } from '@/lib/supabase';
 import {
   markQueueFailure,
-  pendingSyncCount,
   readQueueBatch,
+  rejectQueueEntries,
   removeQueueEntries,
+  removeRejectedEntriesForRows,
+  sendableSyncCount,
 } from '@/repositories/syncQueue';
 import { toRemote, type RemoteRow } from '@/sync/columns';
 import { requireSession } from '@/sync/session';
@@ -13,73 +15,189 @@ import { requireSession } from '@/sync/session';
 // Push (docs/STORAGE.md §3) : vide la file `sync_queue` du compte dans l'ordre d'écriture, par lots.
 // Chaque table d'un lot part en un upsert par id (relançable sans doublon ; côté Supabase, le trigger
 // skip_stale_update ignore une version qui n'est pas plus récente). Une entrée n'est retirée de la
-// file qu'après confirmation de Supabase. Au premier échec, les entrées non envoyées du lot sont
-// marquées (`attempts`, `last_error`), le push s'arrête et l'erreur remonte : l'ordre est préservé.
+// file qu'après confirmation de Supabase.
+//
+// Erreurs :
+// - refus de la ligne (donnée invalide pour le serveur : renvoyer la même ligne échouera toujours) :
+//   le groupe est renvoyé ligne par ligne pour isoler la ou les lignes fautives, qui sont mises de
+//   côté (`rejected_at`) ; les autres partent, la file n'est pas bloquée ;
+// - erreur passagère (réseau, serveur, configuration) : les entrées non envoyées du lot sont
+//   marquées (`attempts`, `last_error`), le push s'arrête et l'erreur remonte (ordre préservé).
 
 /** Nombre d'entrées de file lues par lot. */
 export const PUSH_BATCH_SIZE = 200;
 
-/** Envoie des lignes (snake_case) d'une table ; rejette en cas d'échec. */
+export type PushErrorKind = 'rejected' | 'transient';
+
+/** Échec d'envoi avec sa nature : refus de la ligne ou erreur passagère. */
+export class PushError extends Error {
+  constructor(
+    message: string,
+    readonly kind: PushErrorKind,
+  ) {
+    super(message);
+    this.name = 'PushError';
+  }
+}
+
+/**
+ * Nature d'une erreur Postgres / PostgREST d'après son code. Refus de la ligne : `22xxx` (donnée
+ * invalide), `23xxx` (contrainte : unicité, CHECK, NOT NULL), `42501` (RLS). Tout le reste est
+ * passager : réseau (code vide), PostgREST (`PGRST…`), colonne inconnue (migration non appliquée)…
+ */
+export function classifyErrorCode(code: string | undefined): PushErrorKind {
+  if (code && (/^2[23]/.test(code) || code === '42501')) return 'rejected';
+  return 'transient';
+}
+
+const isRejection = (e: unknown) => e instanceof PushError && e.kind === 'rejected';
+const messageOf = (e: unknown) => (e instanceof Error ? e.message : 'Envoi impossible');
+
+/** Envoie des lignes (snake_case) d'une table ; rejette en cas d'échec (`PushError` si classé). */
 export type UpsertRows = (tableName: SyncedTableName, rows: RemoteRow[]) => Promise<void>;
 
-/** Avancement : entrées envoyées / total au départ (le total grandit si on écrit pendant l'envoi). */
-export type PushProgress = (sent: number, total: number) => void;
+/** Avancement : entrées traitées / total au départ (le total grandit si on écrit pendant l'envoi). */
+export type PushProgress = (done: number, total: number) => void;
+
+/** Bilan du push : entrées envoyées et entrées mises de côté. */
+export type PushResult = { sent: number; rejected: number };
 
 const upsertToSupabase: UpsertRows = async (tableName, rows) => {
   const { error } = await supabase.from(tableName).upsert(rows, { onConflict: 'id' });
-  if (error) throw new Error(`Envoi impossible (${tableName}, ${error.code})`);
+  if (error) {
+    throw new PushError(
+      `Envoi impossible (${tableName}, ${error.code || 'réseau'})`,
+      classifyErrorCode(error.code),
+    );
+  }
 };
 
-type TableGroup = { entryIds: string[]; rows: Map<string, Record<string, unknown>> };
+// Une ligne à envoyer : sa dernière version et toutes ses entrées du lot.
+type PendingRow = { rowId: string; payload: Record<string, unknown>; entryIds: string[] };
 
-// Regroupe un lot par table ; une ligne écrite plusieurs fois n'est envoyée qu'une fois, dans sa
-// dernière version (Postgres refuse de modifier deux fois la même ligne dans un même upsert).
-function groupByTable(batch: ReturnType<typeof readQueueBatch>): Map<SyncedTableName, TableGroup> {
-  const groups = new Map<SyncedTableName, TableGroup>();
+// Regroupe un lot par table puis par ligne : une ligne écrite plusieurs fois n'est envoyée qu'une
+// fois, dans sa dernière version (Postgres refuse de modifier deux fois la même ligne d'un upsert).
+function groupByTable(batch: SyncQueueRow[]): Map<SyncedTableName, PendingRow[]> {
+  const groups = new Map<SyncedTableName, Map<string, PendingRow>>();
   for (const entry of batch) {
-    let group = groups.get(entry.tableName);
-    if (!group) {
-      group = { entryIds: [], rows: new Map() };
-      groups.set(entry.tableName, group);
+    let rows = groups.get(entry.tableName);
+    if (!rows) {
+      rows = new Map();
+      groups.set(entry.tableName, rows);
     }
-    group.entryIds.push(entry.id);
-    group.rows.set(entry.rowId, entry.payload);
+    const row = rows.get(entry.rowId);
+    if (row) {
+      row.payload = entry.payload;
+      row.entryIds.push(entry.id);
+    } else {
+      rows.set(entry.rowId, { rowId: entry.rowId, payload: entry.payload, entryIds: [entry.id] });
+    }
   }
-  return groups;
+  return new Map([...groups].map(([tableName, rows]) => [tableName, [...rows.values()]]));
 }
 
-/** Envoie toute la file du compte. `upsert` est remplaçable (tests). */
+/** Envoie toute la file du compte (hors entrées mises de côté). `upsert` est remplaçable (tests). */
 export async function pushAll(
   db: Database,
   userId: string,
   upsert: UpsertRows = upsertToSupabase,
   onProgress?: PushProgress,
-): Promise<void> {
-  let total = pendingSyncCount(db, userId);
-  let sent = 0;
+): Promise<PushResult> {
+  let total = sendableSyncCount(db, userId);
+  const result: PushResult = { sent: 0, rejected: 0 };
   onProgress?.(0, total);
+
+  const report = (count: number) => {
+    const done = result.sent + result.rejected;
+    total = Math.max(total, done);
+    if (count > 0) onProgress?.(done, total);
+  };
+
+  const sent = (tableName: SyncedTableName, rows: PendingRow[]) => {
+    const entryIds = rows.flatMap((row) => row.entryIds);
+    removeQueueEntries(db, userId, entryIds);
+    // Une version plus récente est passée : les versions mises de côté sont dépassées.
+    removeRejectedEntriesForRows(
+      db,
+      userId,
+      tableName,
+      rows.map((row) => row.rowId),
+    );
+    result.sent += entryIds.length;
+    report(entryIds.length);
+  };
+
+  const reject = (row: PendingRow, e: unknown) => {
+    rejectQueueEntries(db, userId, row.entryIds, messageOf(e), new Date().toISOString());
+    result.rejected += row.entryIds.length;
+    report(row.entryIds.length);
+  };
+
+  // Envoi sans lever : l'appelant décide selon la nature de l'erreur.
+  const tryUpsert = async (tableName: SyncedTableName, rows: RemoteRow[]) => {
+    try {
+      await upsert(tableName, rows);
+      return { ok: true as const };
+    } catch (error) {
+      return { ok: false as const, error };
+    }
+  };
 
   for (;;) {
     const batch = readQueueBatch(db, userId, PUSH_BATCH_SIZE);
-    if (batch.length === 0) return;
-    let unsent = batch.map((entry) => entry.id);
+    if (batch.length === 0) return result;
+    const processed = new Set<string>();
+    const markProcessed = (row: PendingRow) => row.entryIds.forEach((id) => processed.add(id));
+    // Erreur passagère : entrées non traitées du lot marquées, arrêt du push.
+    const stop = (e: unknown): never => {
+      const unsent = batch.map((entry) => entry.id).filter((id) => !processed.has(id));
+      markQueueFailure(db, userId, unsent, messageOf(e));
+      throw e;
+    };
 
-    for (const [tableName, group] of groupByTable(batch)) {
-      try {
-        const rows = [...group.rows.values()].map((payload) => {
-          if (payload.userId !== userId) throw new Error(`Entrée d’un autre compte (${tableName})`);
-          return toRemote(tableName, payload);
-        });
-        await upsert(tableName, rows);
-      } catch (e) {
-        markQueueFailure(db, userId, unsent, e instanceof Error ? e.message : 'Envoi impossible');
-        throw e;
+    for (const [tableName, rows] of groupByTable(batch)) {
+      // Payload local inconvertible (autre compte, colonne inconnue) : refus sans envoi.
+      const toSend: { row: PendingRow; remote: RemoteRow }[] = [];
+      for (const row of rows) {
+        try {
+          if (row.payload.userId !== userId) {
+            throw new Error(`Entrée d’un autre compte (${tableName})`);
+          }
+          toSend.push({ row, remote: toRemote(tableName, row.payload) });
+        } catch (e) {
+          reject(row, e);
+          markProcessed(row);
+        }
       }
-      removeQueueEntries(db, userId, group.entryIds);
-      unsent = unsent.filter((id) => !group.entryIds.includes(id));
-      sent += group.entryIds.length;
-      total = Math.max(total, sent);
-      onProgress?.(sent, total);
+      if (toSend.length === 0) continue;
+
+      const grouped = await tryUpsert(
+        tableName,
+        toSend.map((item) => item.remote),
+      );
+      if (grouped.ok) {
+        sent(
+          tableName,
+          toSend.map((item) => item.row),
+        );
+        toSend.forEach((item) => markProcessed(item.row));
+        continue;
+      }
+      if (!isRejection(grouped.error)) stop(grouped.error);
+      if (toSend.length === 1) {
+        reject(toSend[0].row, grouped.error);
+        markProcessed(toSend[0].row);
+        continue;
+      }
+
+      // Refus d'un envoi groupé : renvoi ligne par ligne pour isoler la ou les lignes fautives.
+      for (const { row, remote } of toSend) {
+        const single = await tryUpsert(tableName, [remote]);
+        if (single.ok) sent(tableName, [row]);
+        else if (isRejection(single.error)) reject(row, single.error);
+        else stop(single.error);
+        markProcessed(row);
+      }
     }
   }
 }
@@ -89,7 +207,7 @@ export async function pushToSupabase(
   db: Database,
   userId: string,
   onProgress?: PushProgress,
-): Promise<void> {
+): Promise<PushResult> {
   await requireSession(userId);
-  await pushAll(db, userId, upsertToSupabase, onProgress);
+  return pushAll(db, userId, upsertToSupabase, onProgress);
 }

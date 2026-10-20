@@ -239,6 +239,9 @@ export const syncQueue = sqliteTable(
     payload: text('payload', { mode: 'json' }).notNull().$type<Record<string, unknown>>(),
     attempts: integer('attempts').notNull().default(0),
     lastError: text('last_error'),
+    // Refusée définitivement par Supabase (donnée invalide) : mise de côté, ignorée par le push
+    // jusqu'à « Réessayer » ; reste comptée comme non synchronisée.
+    rejectedAt: text('rejected_at'),
     createdAt: text('created_at').notNull(),
   },
   (t) => [index('sync_queue_user_created_idx').on(t.userId, t.createdAt)],

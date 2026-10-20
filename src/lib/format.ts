@@ -80,8 +80,13 @@ export function parseIsoDate(date: string): Date {
 export function formatDateTime(iso: string, now = new Date()): string {
   const d = new Date(iso);
   const day = formatListDate(toIsoDate(d), now);
-  const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  return `${day.charAt(0).toLowerCase()}${day.slice(1)} à ${time}`;
+  return `${day.charAt(0).toLowerCase()}${day.slice(1)} à ${formatTime(iso)}`;
+}
+
+// Heure locale « 14:32 » d'un horodatage ISO.
+export function formatTime(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 // « Yasmine Benali » → « YB ».
