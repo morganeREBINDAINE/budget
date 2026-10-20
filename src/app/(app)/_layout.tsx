@@ -5,6 +5,7 @@ import { useDatabase } from '@/db/DatabaseProvider';
 import { useTheme } from '@/design-system';
 import { useUserId } from '@/features/auth/AuthProvider';
 import { MenuProvider } from '@/features/navigation/MenuProvider';
+import { ReauthNotifier } from '@/features/sync/ReauthNotifier';
 import { startAutoSync } from '@/sync/autoSync';
 import { resumeInitialPull } from '@/sync/initialPull';
 import { cancelScheduledSync } from '@/sync/syncNow';
@@ -32,6 +33,7 @@ export default function AppLayout() {
   };
   return (
     <MenuProvider>
+      <ReauthNotifier />
       <Stack
         screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
       >

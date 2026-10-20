@@ -20,10 +20,12 @@ import { SessionError } from '@/sync/session';
 // la carte reste « en attente ») ; le démarrage et le retour du réseau synchronisent tout de suite
 // et remettent le compteur à zéro ; le premier plan et les écritures laissent faire la relance
 // programmée (elle enverra toute la file). Une écriture pendant une synchronisation en demande une
-// seconde à la fin (sinon elle attendrait le déclencheur suivant).
+// seconde à la fin (sinon elle attendrait le déclencheur suivant). Session refusée : aucun
+// déclencheur automatique jusqu'à la reconnexion (« Se reconnecter avec Google » → `syncNow`).
 
 export const OFFLINE_MESSAGE = 'Pas de connexion internet.';
 export const FAILED_MESSAGE = 'La synchronisation a échoué. Réessaie.';
+export const SESSION_MESSAGE = 'Session expirée : reconnexion requise.';
 
 /** Délais des relances automatiques successives ; le dernier se répète. */
 export const RETRY_DELAYS_MS = [10_000, 30_000, 60_000, 5 * 60_000, 15 * 60_000];
@@ -44,6 +46,8 @@ export type SyncRunState = {
   error: string | null;
   // Heure ISO de la prochaine relance automatique, `null` si aucune n'est programmée.
   nextRetryAt: string | null;
+  // Dernière tentative refusée faute de session valide : reconnexion requise.
+  sessionRefused: boolean;
 };
 
 export type SyncResult = { ok: true } | { ok: false; reason: 'offline' | 'session' | 'failed' };
@@ -80,6 +84,7 @@ function patchState(userId: string, patch: Partial<SyncRunState>) {
     progress: 0,
     error: null,
     nextRetryAt: null,
+    sessionRefused: false,
   };
   state = { ...current, ...patch };
   listeners.forEach((listener) => listener());
@@ -119,6 +124,7 @@ export async function requestSync(
   trigger: SyncTrigger,
   deps: SyncDeps = defaultDeps,
 ): Promise<void> {
+  if (getSyncRunState(userId)?.sessionRefused) return;
   if (!(await deps.isOnline())) return;
 
   if (running?.userId === userId) {
@@ -211,7 +217,7 @@ async function runSync(
   { pull = true }: SyncOptions,
   deps: SyncDeps,
 ): Promise<SyncResult> {
-  patchState(userId, { running: true, progress: 0, nextRetryAt: null });
+  patchState(userId, { running: true, progress: 0, nextRetryAt: null, sessionRefused: false });
   // Hors ligne : aucune requête (elle attendrait un délai d'expiration voué à l'échec).
   if (!(await deps.isOnline())) {
     patchState(userId, { running: false, error: OFFLINE_MESSAGE });
@@ -231,8 +237,11 @@ async function runSync(
     return { ok: true };
   } catch (e) {
     console.error('[sync] synchronisation impossible', e);
+    if (e instanceof SessionError) {
+      patchState(userId, { running: false, error: SESSION_MESSAGE, sessionRefused: true });
+      return { ok: false, reason: 'session' };
+    }
     patchState(userId, { running: false, error: FAILED_MESSAGE });
-    if (e instanceof SessionError) return { ok: false, reason: 'session' };
     scheduleRetry(db, userId, deps);
     return { ok: false, reason: 'failed' };
   }

@@ -9,11 +9,23 @@ import { isAuthRetryableFetchError, type User } from '@supabase/supabase-js';
 import { env } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
 
+import { isSameEmail } from './reauth';
+
 // Connexion Google native (CLAUDE.md) : modale système → idToken → session Supabase.
 // Aucune redirection web ni deep link.
 
 export type GoogleSignInResult =
-  { type: 'success'; user: User } | { type: 'cancelled' } | { type: 'error'; message: string };
+  | { type: 'success'; user: User }
+  | { type: 'cancelled' }
+  // Compte Google différent de celui attendu (reconnexion) : refusé avant tout appel Supabase.
+  | { type: 'wrongAccount' }
+  | { type: 'error'; message: string };
+
+export type GoogleSignInOptions = {
+  // Reconnexion : email du compte local. Un autre compte Google est refusé avant
+  // `signInWithIdToken`, qui créerait sinon un nouveau compte Supabase pour cette adresse.
+  expectedEmail?: string | null;
+};
 
 // Codes CommonStatusCodes de Google Play Services remontés par le module Android.
 const NETWORK_ERROR = '7';
@@ -46,7 +58,9 @@ function googleErrorMessage(error: unknown): string | null {
   }
 }
 
-export async function signInWithGoogle(): Promise<GoogleSignInResult> {
+export async function signInWithGoogle({
+  expectedEmail,
+}: GoogleSignInOptions = {}): Promise<GoogleSignInResult> {
   try {
     configure();
     // Affiche la boîte de dialogue de mise à jour de Play Services si nécessaire.
@@ -54,7 +68,12 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
     const response = await GoogleSignin.signIn();
     if (!isSuccessResponse(response)) return { type: 'cancelled' };
 
-    const { idToken } = response.data;
+    const { idToken, user: googleUser } = response.data;
+    if (expectedEmail && !isSameEmail(googleUser.email, expectedEmail)) {
+      // Pour que le sélecteur de compte réapparaisse au prochain essai.
+      await GoogleSignin.signOut().catch(() => undefined);
+      return { type: 'wrongAccount' };
+    }
     if (!idToken) {
       console.error('[auth] idToken absent : vérifier EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID');
       return { type: 'error', message: 'Google n’a pas renvoyé de jeton. Réessaie.' };

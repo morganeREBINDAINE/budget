@@ -14,6 +14,7 @@ import {
   type BadgeVariant,
   type ThemeColor,
 } from '@/design-system';
+import { GoogleLogo } from '@/features/auth/GoogleLogo';
 import { formatDateTime, formatTime } from '@/lib/format';
 import type { SyncStatus } from '@/types/sync';
 
@@ -22,6 +23,10 @@ type Props = {
   status: SyncStatus | null;
   // Promise : spinner et garde du bouton jusqu'à la fin de la synchronisation.
   onSync: () => Promise<unknown>;
+  // État `reauth` : reconnexion Google puis synchronisation (Promise : spinner et garde).
+  onReconnect: () => Promise<unknown>;
+  // Erreur de la dernière reconnexion, affichée au-dessus du bouton.
+  reconnectError: string | null;
 };
 
 type StateStyle = {
@@ -54,6 +59,13 @@ const STATES: Record<SyncStatus['state'], StateStyle> = {
     fg: 'success',
     bg: 'successSoft',
   },
+  reauth: {
+    label: 'Reconnexion',
+    badge: 'danger',
+    icon: 'account-alert-outline',
+    fg: 'danger',
+    bg: 'dangerSoft',
+  },
   error: {
     label: 'Erreur',
     badge: 'danger',
@@ -73,7 +85,7 @@ const lastSyncText = (iso: string | null) =>
 
 // Carte d'état de la synchronisation avec Supabase. Le bouton reste visible même « À jour » :
 // la synchronisation récupère aussi les changements faits ailleurs (pull).
-export function SyncStatusCard({ status, onSync }: Props) {
+export function SyncStatusCard({ status, onSync, onReconnect, reconnectError }: Props) {
   const { colors, radius } = useTheme();
   if (!status) return <SyncStatusCardSkeleton />;
   const s = STATES[status.state];
@@ -105,13 +117,30 @@ export function SyncStatusCard({ status, onSync }: Props) {
 
       <SyncDetail status={status} />
 
-      <Button
-        label={status.state === 'error' ? 'Réessayer' : 'Synchroniser'}
-        variant="secondary"
-        loading={status.state === 'syncing'}
-        onPress={onSync}
-        fullWidth
-      />
+      {status.state === 'reauth' ? (
+        <Stack gap="sm">
+          {reconnectError ? (
+            <Text variant="bodySmall" color="danger" accessibilityLiveRegion="polite">
+              {reconnectError}
+            </Text>
+          ) : null}
+          <Button
+            label="Se reconnecter avec Google"
+            variant="outline"
+            leftIcon={<GoogleLogo />}
+            onPress={onReconnect}
+            fullWidth
+          />
+        </Stack>
+      ) : (
+        <Button
+          label={status.state === 'error' ? 'Réessayer' : 'Synchroniser'}
+          variant="secondary"
+          loading={status.state === 'syncing'}
+          onPress={onSync}
+          fullWidth
+        />
+      )}
     </Card>
   );
 }
@@ -147,6 +176,19 @@ function SyncDetail({ status }: { status: SyncStatus }) {
               Nouvel essai automatique vers {formatTime(status.nextRetryAt)}
             </Text>
           ) : null}
+          <Text variant="bodySmall" color="textMuted">
+            {lastSyncText(status.lastSyncedAt)}
+          </Text>
+        </Stack>
+      );
+    case 'reauth':
+      return (
+        <Stack gap="xs">
+          <Text variant="bodySmall" color="danger">
+            Ta session a expiré. Reconnecte-toi avec le même compte Google
+            {status.email ? ` (${status.email})` : ''} pour reprendre la synchronisation. Tes
+            données restent sur ce téléphone.
+          </Text>
           <Text variant="bodySmall" color="textMuted">
             {lastSyncText(status.lastSyncedAt)}
           </Text>

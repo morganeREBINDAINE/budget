@@ -1,10 +1,10 @@
 import { and, eq } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 
 import { useDatabase } from '@/db/DatabaseProvider';
 import { settings } from '@/db/schema';
-import { useUserId } from '@/features/auth/AuthProvider';
+import { useAuth, useUserId } from '@/features/auth/AuthProvider';
 import { rejectedSyncCountQuery, requeueRejectedEntries } from '@/repositories/syncQueue';
 import { getSyncRunState, subscribeSyncRun, syncNow, type SyncResult } from '@/sync/syncNow';
 import type { SyncStatus } from '@/types/sync';
@@ -18,15 +18,27 @@ const rejectedMessage = (n: number) =>
     ? `${n} éléments refusés par le serveur. Ils restent sur ce téléphone.`
     : '1 élément refusé par le serveur. Il reste sur ce téléphone.';
 
+export type SyncStatusController = {
+  // `null` tant que le nombre d'éléments en attente n'est pas lu.
+  status: SyncStatus | null;
+  sync: () => Promise<SyncResult>;
+  // « Se reconnecter avec Google » puis reprise de la file (Promise : spinner et garde du bouton).
+  reconnect: () => Promise<void>;
+  // Erreur de la dernière reconnexion (sous le bouton), `null` sinon.
+  reconnectError: string | null;
+};
+
 /**
- * État de la carte de synchro du compte connecté : synchronisation en cours (store), nombre
- * d'éléments en attente et mis de côté, date de la dernière synchro (requêtes SQLite en direct).
- * `null` tant que le nombre d'éléments en attente n'est pas lu.
+ * État de la carte de synchro du compte connecté : synchronisation en cours (store), reconnexion
+ * requise (session refusée), nombre d'éléments en attente et mis de côté, date de la dernière
+ * synchro (requêtes SQLite en direct).
  */
-export function useSyncStatus(): { status: SyncStatus | null; sync: () => Promise<SyncResult> } {
+export function useSyncStatus(): SyncStatusController {
   const db = useDatabase();
   const userId = useUserId();
+  const { account, needsReauth, reauthenticate } = useAuth();
   const run = useSyncExternalStore(subscribeSyncRun, () => getSyncRunState(userId));
+  const [reconnectError, setReconnectError] = useState<string | null>(null);
   const pending = usePendingSyncCount();
 
   const lastSyncedQuery = useMemo(
@@ -50,6 +62,15 @@ export function useSyncStatus(): { status: SyncStatus | null; sync: () => Promis
     return syncNow(db, userId);
   }, [db, userId]);
 
+  // Reconnexion acceptée uniquement pour le même compte, puis la file reprend sans perte.
+  const reconnect = useCallback(async () => {
+    setReconnectError(null);
+    const result = await reauthenticate();
+    if (result.type === 'error') setReconnectError(result.message);
+    if (result.type !== 'success') return;
+    await syncNow(db, userId);
+  }, [db, userId, reauthenticate]);
+
   let status: SyncStatus | null;
   if (pending.status === 'loading') {
     status = null;
@@ -63,6 +84,13 @@ export function useSyncStatus(): { status: SyncStatus | null; sync: () => Promis
     };
   } else if (run?.running) {
     status = { state: 'syncing', progress: run.progress, pendingCount: pending.count };
+  } else if (needsReauth || run?.sessionRefused) {
+    status = {
+      state: 'reauth',
+      email: account?.email ?? null,
+      pendingCount: pending.count,
+      lastSyncedAt,
+    };
   } else if (run?.error) {
     // Dernière tentative échouée (même file vide : le pull n'a pas pu se faire).
     status = {
@@ -85,5 +113,5 @@ export function useSyncStatus(): { status: SyncStatus | null; sync: () => Promis
   } else {
     status = { state: 'synced', lastSyncedAt };
   }
-  return { status, sync };
+  return { status, sync, reconnect, reconnectError };
 }

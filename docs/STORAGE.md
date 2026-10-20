@@ -32,7 +32,7 @@ Modèle hors ligne d'abord, aligné sur `docs/PLAN.md` (phases 5 et 6).
 
 - **Compte local persistant** : à la première connexion Google, le compte (`user_id`, email, nom) est enregistré localement (chiffré). L'état « connecté » de l'app repose sur ce compte local, pas sur la validité du token Supabase.
 - **Pas de déconnexion automatique** : seule une déconnexion manuelle ramène à l'écran de connexion. Hors ligne, token expiré ou session invalidée côté serveur, l'app reste utilisable et continue d'écrire en local dans `sync_queue`.
-- **Session invalidée côté serveur** (refresh refusé) : la synchro passe à l'état « Reconnexion requise » ; la reconnexion Google n'est acceptée que pour le **même** `user_id`, puis la file reprend sans perte.
+- **Session invalidée côté serveur** (refresh refusé) : la synchro passe à l'état « Reconnexion requise » (carte Compte, toast une fois par lancement) et les déclencheurs automatiques sont en pause ; la reconnexion Google n'est acceptée que pour le **même** compte (email Google vérifié avant tout appel Supabase, puis `user_id`), puis la file reprend sans perte. Un rafraîchissement impossible faute de réseau n'est pas une session refusée : erreur passagère, relancée.
 - **Déconnexion manuelle** :
   1. si en ligne, tenter une synchronisation complète avant de se déconnecter (loader dans la modale) ;
   2. s'il reste des éléments non synchronisés, avertir avec leur nombre et préciser qu'ils restent sur le téléphone et seront envoyés à la prochaine connexion avec ce compte ;

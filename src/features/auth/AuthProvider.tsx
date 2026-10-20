@@ -22,10 +22,12 @@ import {
   saveLocalAccount,
   type LocalAccount,
 } from './localAccount';
+import { wrongAccountMessage } from './reauth';
 
 // Session de l'app (docs/STORAGE.md §4) : « connecté » = compte local présent. Hors ligne, token
 // expiré ou session invalidée côté serveur, on reste connecté ; seul `signOut` (manuel) déconnecte.
-// `needsReauth` signale une session Supabase absente ou refusée (état « Reconnexion requise », phase 6).
+// `needsReauth` signale une session Supabase absente ou refusée (état « Reconnexion requise » de la
+// carte Compte) ; `reauthenticate` la rétablit, uniquement pour le même compte.
 
 type AuthState =
   | { status: 'loading' }
@@ -42,6 +44,8 @@ type AuthContextValue = {
   // `onSignedIn` : appelé juste avant que le compte ne soit considéré connecté (ex. lancer le pull
   // initial, dont les écrans affichent l'avancement).
   signInWithGoogle: (onSignedIn: (userId: string) => void) => Promise<SignInResult>;
+  // Reconnexion Google du compte local (même user_id), sans toucher au compte ni aux données.
+  reauthenticate: () => Promise<SignInResult>;
   signOut: () => Promise<void>;
 };
 
@@ -130,6 +134,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = useCallback(
     async (onSignedIn: (userId: string) => void): Promise<SignInResult> => {
       const result = await googleSignIn();
+      // Sans `expectedEmail`, `wrongAccount` n'est jamais renvoyé : branche pour le typage.
+      if (result.type === 'wrongAccount')
+        return { type: 'error', message: wrongAccountMessage(null) };
       if (result.type !== 'success') return result;
 
       const account = accountFromUser(result.user);
@@ -147,6 +154,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+
+  const reauthenticate = useCallback(async (): Promise<SignInResult> => {
+    const account = accountRef.current;
+    if (!account) return { type: 'error', message: 'Aucun compte sur ce téléphone.' };
+
+    const result = await googleSignIn({ expectedEmail: account.email });
+    if (result.type === 'wrongAccount') {
+      return { type: 'error', message: wrongAccountMessage(account.email) };
+    }
+    if (result.type !== 'success') return result;
+
+    if (result.user.id !== account.id) {
+      // Filet de sécurité (email absent du compte local) : la session de l'autre compte est écartée.
+      console.warn('[auth] reconnexion avec un autre compte refusée');
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+      await signOutFromGoogle().catch(() => undefined);
+      return { type: 'error', message: wrongAccountMessage(account.email) };
+    }
+    setNeedsReauth(false);
+    return { type: 'success' };
+  }, [setNeedsReauth]);
 
   // Déconnexion manuelle : aucune donnée locale ni sync_queue n'est supprimée (docs/STORAGE.md §4).
   const signOut = useCallback(async () => {
@@ -175,9 +203,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       account: state.status === 'signedIn' ? state.account : null,
       needsReauth: state.status === 'signedIn' && state.needsReauth,
       signInWithGoogle,
+      reauthenticate,
       signOut,
     }),
-    [state, signInWithGoogle, signOut],
+    [state, signInWithGoogle, reauthenticate, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

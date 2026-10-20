@@ -66,6 +66,7 @@ describe('syncNow', () => {
       progress: 1,
       error: null,
       nextRetryAt: null,
+      sessionRefused: false,
     });
   });
 
@@ -233,8 +234,23 @@ describe('relances automatiques', () => {
       ok: false,
       reason: 'session',
     });
-    expect(store.getSyncRunState(USER)?.nextRetryAt).toBeNull();
+    expect(store.getSyncRunState(USER)).toMatchObject({
+      error: store.SESSION_MESSAGE,
+      sessionRefused: true,
+      nextRetryAt: null,
+    });
     expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('une nouvelle synchro remet sessionRefused à faux', async () => {
+    const push = jest
+      .fn<Promise<PushResult>, []>()
+      .mockRejectedValueOnce(new SessionError('Session absente'))
+      .mockResolvedValue(NOTHING);
+    await store.syncNow(db, USER, {}, deps({ push }));
+    expect(store.getSyncRunState(USER)?.sessionRefused).toBe(true);
+    await store.syncNow(db, USER, {}, deps({ push }));
+    expect(store.getSyncRunState(USER)).toMatchObject({ sessionRefused: false, error: null });
   });
 
   it('cancelScheduledSync annule la relance du compte', async () => {
@@ -367,6 +383,24 @@ describe('requestSync (déclencheurs automatiques)', () => {
     await jest.advanceTimersByTimeAsync(0);
     expect(d.push).toHaveBeenCalledTimes(1);
     expect(store.getSyncRunState(USER)?.nextRetryAt).not.toBeNull();
+  });
+
+  it('session refusée : aucun déclencheur automatique jusqu’à un appel explicite', async () => {
+    const push = jest
+      .fn<Promise<PushResult>, []>()
+      .mockRejectedValueOnce(new SessionError('Session absente'))
+      .mockResolvedValue(NOTHING);
+    const d = deps({ push });
+    await store.syncNow(db, USER, {}, d);
+    for (const trigger of ['startup', 'network', 'foreground', 'write'] as const) {
+      await store.requestSync(db, USER, trigger, d);
+    }
+    expect(push).toHaveBeenCalledTimes(1);
+
+    // Reconnexion : appel explicite, puis les déclencheurs reprennent.
+    await store.syncNow(db, USER, {}, d);
+    await store.requestSync(db, USER, 'write', d);
+    expect(push).toHaveBeenCalledTimes(3);
   });
 
   it('cancelScheduledSync annule la seconde synchro demandée', async () => {

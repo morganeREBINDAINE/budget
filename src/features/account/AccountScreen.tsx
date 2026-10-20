@@ -63,12 +63,17 @@ export function AccountScreen() {
   const { ready } = useInitialPull();
   const db = useDatabase();
   const userId = useUserId();
-  const { status: syncStatus, sync } = useSyncStatus();
+  const { status: syncStatus, sync, reconnect, reconnectError } = useSyncStatus();
 
   const syncData = useCallback(async () => {
     if (!ready) return;
     await sync();
   }, [ready, sync]);
+
+  const reconnectAccount = useCallback(async () => {
+    if (!ready) return;
+    await reconnect();
+  }, [ready, reconnect]);
 
   // Déconnexion (docs/STORAGE.md §4) : premier appui = envoi de la file si elle n'est pas vide
   // (hors ligne : aucun appel). S'il reste des éléments, la modale reste ouverte avec la raison et
@@ -79,9 +84,13 @@ export function AccountScreen() {
       const result = await syncNow(db, userId, { pull: false });
       if (pendingSyncCount(db, userId) > 0) {
         setLogoutBlocked(
-          !result.ok && result.reason === 'offline'
-            ? 'Hors ligne : envoi impossible.'
-            : 'L’envoi n’a pas abouti.',
+          result.ok
+            ? 'L’envoi n’a pas abouti.'
+            : {
+                offline: 'Hors ligne : envoi impossible.',
+                session: 'Session expirée : envoi impossible.',
+                failed: 'L’envoi n’a pas abouti.',
+              }[result.reason],
         );
         return;
       }
@@ -135,7 +144,12 @@ export function AccountScreen() {
         showsVerticalScrollIndicator={false}
       >
         <ProfileCard name={account?.name ?? null} email={account?.email ?? null} />
-        <SyncStatusCard status={ready ? syncStatus : null} onSync={syncData} />
+        <SyncStatusCard
+          status={ready ? syncStatus : null}
+          onSync={syncData}
+          onReconnect={reconnectAccount}
+          reconnectError={reconnectError}
+        />
 
         <Stack gap="sm">
           <Text variant="label" color="textSecondary">
