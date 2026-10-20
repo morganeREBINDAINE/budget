@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable } from 'react-native';
 
 import { Card, Input, minTouchTarget, Row, Stack, Text, useTheme } from '@/design-system';
+import { normalizeName } from '@/lib/text';
 import type { DebtPerson } from '@/types/budget';
 
 type Props = {
@@ -15,16 +16,6 @@ type Props = {
 
 const MAX_SUGGESTIONS = 5;
 export const PERSON_NAME_MAX_LENGTH = 40;
-
-// Diacritiques combinants (U+0300–U+036F) laissés par la décomposition NFD.
-const DIACRITICS = new RegExp(
-  `[${String.fromCharCode(0x0300)}-${String.fromCharCode(0x036f)}]`,
-  'g',
-);
-
-// Comparaison insensible à la casse et aux accents.
-export const normalizeName = (s: string) =>
-  s.trim().normalize('NFD').replace(DIACRITICS, '').toLowerCase();
 
 // Champ « Personne » avec autocomplétion des noms enregistrés (5 suggestions au plus).
 export function PersonField({ value, onChange, people, label = 'Personne', error }: Props) {

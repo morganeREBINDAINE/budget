@@ -17,9 +17,10 @@ import {
 import { InitialPullError } from '@/features/sync/components/InitialPullError';
 import { LoadingRegion } from '@/features/sync/components/Skeletons';
 import { useInitialPull } from '@/features/sync/useInitialPull';
-import { mockCategories } from '@/mocks/budget';
 
+import { CategoriesReadError } from './components/CategoriesReadError';
 import { CategoryIcon } from './components/CategoryIcon';
+import { useCategories } from './useCategories';
 
 // Nombre fixe de catégories (v1).
 const CATEGORY_COUNT = 9;
@@ -27,8 +28,8 @@ const CATEGORY_COUNT = 9;
 // Liste des 9 catégories (nombre fixe : pas de virtualisation).
 export function CategoriesScreen() {
   const { colors, spacing } = useTheme();
-  const categories = [...mockCategories].sort((a, b) => a.position - b.position);
   const { ready, failed } = useInitialPull();
+  const categories = useCategories();
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
@@ -49,7 +50,9 @@ export function CategoriesScreen() {
         </Text>
         {failed ? (
           <InitialPullError />
-        ) : !ready ? (
+        ) : categories.status === 'error' ? (
+          <CategoriesReadError />
+        ) : !ready || categories.status === 'loading' ? (
           <LoadingRegion>
             <Card padding="xs">
               {Array.from({ length: CATEGORY_COUNT }, (_, i) => (
@@ -59,7 +62,7 @@ export function CategoriesScreen() {
           </LoadingRegion>
         ) : (
           <Card padding="xs">
-            {categories.map((c) => (
+            {categories.data.map((c) => (
               <ListItem
                 key={c.id}
                 label={c.name}
