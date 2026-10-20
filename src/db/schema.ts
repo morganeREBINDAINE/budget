@@ -216,6 +216,17 @@ export const SYNCED_TABLES = [
 
 export type SyncedTableName = (typeof SYNCED_TABLES)[number];
 
+// Table Drizzle de chaque table synchronisée (outil d'écriture, synchro).
+export const syncedTables = {
+  categories,
+  transactions,
+  recurring_payments: recurringPayments,
+  recurring_occurrences: recurringOccurrences,
+  debt_people: debtPeople,
+  debts,
+  debt_repayments: debtRepayments,
+} as const satisfies Record<SyncedTableName, unknown>;
+
 // File d'attente des écritures à envoyer à Supabase (écrite dans la même transaction que la ligne).
 export const syncQueue = sqliteTable(
   'sync_queue',
