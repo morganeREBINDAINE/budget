@@ -254,3 +254,143 @@ describe('relances automatiques', () => {
     expect(d.pull).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('requestSync (déclencheurs automatiques)', () => {
+  const NOW = new Date('2026-10-20T14:00:00.000Z');
+
+  beforeEach(() => {
+    jest.useFakeTimers({ now: NOW });
+  });
+
+  // Push bloqué jusqu'à `release()` : simule une synchronisation en cours.
+  const blockingPush = () => {
+    const releases: (() => void)[] = [];
+    const push = jest.fn(
+      () => new Promise<PushResult>((resolve) => releases.push(() => resolve(NOTHING))),
+    );
+    return { push, release: () => releases.shift()?.() };
+  };
+
+  it('synchronise si en ligne', async () => {
+    const d = deps();
+    await store.requestSync(db, USER, 'write', d);
+    expect(d.push).toHaveBeenCalledTimes(1);
+    expect(d.pull).toHaveBeenCalledTimes(1);
+  });
+
+  it('hors ligne : aucune requête et état inchangé', async () => {
+    const d = deps({ isOnline: jest.fn(async () => false) });
+    for (const trigger of ['startup', 'network', 'foreground', 'write'] as const) {
+      await store.requestSync(db, USER, trigger, d);
+    }
+    expect(d.push).not.toHaveBeenCalled();
+    expect(store.getSyncRunState(USER)).toBeNull();
+  });
+
+  it('premier plan et écriture laissent faire la relance programmée', async () => {
+    const d = deps({ pull: failingPull() });
+    await store.syncNow(db, USER, {}, d);
+    // Trois relances échouées : la suivante est à 5 min, au-delà de l'intervalle du premier plan.
+    for (const delay of store.RETRY_DELAYS_MS.slice(0, 3)) {
+      await jest.advanceTimersByTimeAsync(delay);
+    }
+    expect(d.push).toHaveBeenCalledTimes(4);
+    const nextRetryAt = store.getSyncRunState(USER)?.nextRetryAt;
+    await jest.advanceTimersByTimeAsync(store.FOREGROUND_MIN_INTERVAL_MS);
+
+    await store.requestSync(db, USER, 'foreground', d);
+    await store.requestSync(db, USER, 'write', d);
+    expect(d.push).toHaveBeenCalledTimes(4);
+    expect(store.getSyncRunState(USER)?.nextRetryAt).toBe(nextRetryAt);
+  });
+
+  it.each(['startup', 'network'] as const)(
+    '%s : synchronise tout de suite et repart du premier délai',
+    async (trigger) => {
+      const d = deps({ pull: failingPull() });
+      await store.syncNow(db, USER, {}, d);
+      await jest.advanceTimersByTimeAsync(store.RETRY_DELAYS_MS[0]);
+      expect(d.push).toHaveBeenCalledTimes(2);
+
+      await store.requestSync(db, USER, trigger, d);
+      expect(d.push).toHaveBeenCalledTimes(3);
+      expect(store.getSyncRunState(USER)?.nextRetryAt).toBe(
+        new Date(Date.now() + store.RETRY_DELAYS_MS[0]).toISOString(),
+      );
+      expect(jest.getTimerCount()).toBe(1);
+    },
+  );
+
+  it('premier plan : rien si la dernière synchro s’est terminée il y a moins d’1 min', async () => {
+    const d = deps();
+    await store.syncNow(db, USER, {}, d);
+    await jest.advanceTimersByTimeAsync(store.FOREGROUND_MIN_INTERVAL_MS - 1);
+    await store.requestSync(db, USER, 'foreground', d);
+    expect(d.push).toHaveBeenCalledTimes(1);
+
+    await jest.advanceTimersByTimeAsync(1);
+    await store.requestSync(db, USER, 'foreground', d);
+    expect(d.push).toHaveBeenCalledTimes(2);
+  });
+
+  it('l’intervalle du premier plan ne concerne pas les écritures', async () => {
+    const d = deps();
+    await store.syncNow(db, USER, {}, d);
+    await store.requestSync(db, USER, 'write', d);
+    expect(d.push).toHaveBeenCalledTimes(2);
+  });
+
+  it('écriture pendant une synchro : une seule seconde synchro à la fin', async () => {
+    const { push, release } = blockingPush();
+    const d = deps({ push });
+    const first = store.syncNow(db, USER, {}, d);
+    await store.requestSync(db, USER, 'write', d);
+    await store.requestSync(db, USER, 'write', d);
+    await store.requestSync(db, USER, 'foreground', d);
+    expect(push).toHaveBeenCalledTimes(1);
+
+    release();
+    await first;
+    await jest.advanceTimersByTimeAsync(0);
+    expect(push).toHaveBeenCalledTimes(2);
+    release();
+    await jest.advanceTimersByTimeAsync(0);
+    expect(push).toHaveBeenCalledTimes(2);
+    expect(store.getSyncRunState(USER)?.running).toBe(false);
+  });
+
+  it('pas de seconde synchro si la synchro en cours échoue (relance programmée)', async () => {
+    const d = deps({ pull: jest.fn(async () => Promise.reject(new Error('503'))) });
+    const first = store.syncNow(db, USER, {}, d);
+    await store.requestSync(db, USER, 'write', d);
+    await first;
+    await jest.advanceTimersByTimeAsync(0);
+    expect(d.push).toHaveBeenCalledTimes(1);
+    expect(store.getSyncRunState(USER)?.nextRetryAt).not.toBeNull();
+  });
+
+  it('cancelScheduledSync annule la seconde synchro demandée', async () => {
+    const { push, release } = blockingPush();
+    const d = deps({ push });
+    const first = store.syncNow(db, USER, {}, d);
+    await store.requestSync(db, USER, 'write', d);
+    store.cancelScheduledSync(USER);
+    release();
+    await first;
+    await jest.advanceTimersByTimeAsync(0);
+    expect(push).toHaveBeenCalledTimes(1);
+  });
+
+  it('un appel explicite pendant la synchro garde la seconde synchro demandée', async () => {
+    const { push, release } = blockingPush();
+    const d = deps({ push });
+    const first = store.syncNow(db, USER, {}, d);
+    await store.requestSync(db, USER, 'write', d);
+    expect(store.syncNow(db, USER, {}, d)).toBe(first);
+    release();
+    await first;
+    await jest.advanceTimersByTimeAsync(0);
+    expect(push).toHaveBeenCalledTimes(2);
+    release();
+  });
+});

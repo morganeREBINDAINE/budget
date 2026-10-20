@@ -5,6 +5,7 @@ import { useDatabase } from '@/db/DatabaseProvider';
 import { useTheme } from '@/design-system';
 import { useUserId } from '@/features/auth/AuthProvider';
 import { MenuProvider } from '@/features/navigation/MenuProvider';
+import { startAutoSync } from '@/sync/autoSync';
 import { resumeInitialPull } from '@/sync/initialPull';
 import { cancelScheduledSync } from '@/sync/syncNow';
 
@@ -18,6 +19,8 @@ export default function AppLayout() {
   const userId = useUserId();
   // Compte jamais récupéré sur ce téléphone (ex. échec du pull puis app fermée) : on relance.
   useEffect(() => resumeInitialPull(db, userId), [db, userId]);
+  // Déclencheurs automatiques (démarrage, réseau, premier plan, écritures), après l'effet ci-dessus.
+  useEffect(() => startAutoSync(db, userId), [db, userId]);
   // Déconnexion ou changement de compte : plus de relance automatique pour ce compte.
   useEffect(() => () => cancelScheduledSync(userId), [userId]);
   // La feuille (fond assombri + animation) est dessinée par <Sheet> dans l'écran lui-même.

@@ -3,6 +3,7 @@ import { randomUUID } from 'expo-crypto';
 
 import type { Database } from '@/db/client';
 import { syncedTables, syncQueue, type SyncedTableName } from '@/db/schema';
+import { notifyLocalWrite } from '@/repositories/localWrites';
 
 // Outil d'écriture commun (docs/STORAGE.md §2) : toute écriture d'une table synchronisée passe par
 // ici. La ligne et son entrée `sync_queue` sont écrites dans une même transaction SQLite : si l'une
@@ -67,7 +68,12 @@ export function nextTimestamp(previous?: string): string {
   return new Date(Math.max(now, min)).toISOString();
 }
 
-function createWriter(tx: Transaction, userId: string, isOpen: () => boolean): Writer {
+function createWriter(
+  tx: Transaction,
+  userId: string,
+  isOpen: () => boolean,
+  onEnqueue: () => void,
+): Writer {
   const ensureOpen = () => {
     if (!isOpen()) throw new Error('Écriture hors transaction (callback asynchrone ?)');
   };
@@ -101,6 +107,7 @@ function createWriter(tx: Transaction, userId: string, isOpen: () => boolean): W
         createdAt: at,
       })
       .run();
+    onEnqueue();
     return row as SyncedRow<T>;
   };
 
@@ -142,21 +149,32 @@ function createWriter(tx: Transaction, userId: string, isOpen: () => boolean): W
 
 /**
  * Exécute plusieurs écritures du compte `userId` de façon atomique (ex. « J'ai payé » = dépense +
- * occurrence, import). Le callback doit être synchrone.
+ * occurrence, import). Le callback doit être synchrone. Une fois la transaction validée, le moteur
+ * de synchro est prévenu (`notifyLocalWrite`) s'il y a des entrées à envoyer.
  */
 export function writeTransaction<R>(db: Database, userId: string, fn: (writer: Writer) => R): R {
-  return db.transaction((tx) => {
+  let enqueued = false;
+  const result = db.transaction((tx) => {
     let open = true;
     try {
-      const result = fn(createWriter(tx, userId, () => open));
-      if (result instanceof Promise) {
+      const value = fn(
+        createWriter(
+          tx,
+          userId,
+          () => open,
+          () => (enqueued = true),
+        ),
+      );
+      if (value instanceof Promise) {
         throw new Error('Le callback de writeTransaction doit être synchrone');
       }
-      return result;
+      return value;
     } finally {
       open = false;
     }
   });
+  if (enqueued) notifyLocalWrite(userId);
+  return result;
 }
 
 /** Crée une ligne (id UUID, `user_id`, horodatages) et l'ajoute à la file d'envoi. */

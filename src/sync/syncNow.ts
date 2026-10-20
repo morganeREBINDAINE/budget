@@ -6,7 +6,8 @@ import { pullFromSupabase } from '@/sync/pull';
 import { pushToSupabase, type PushProgress, type PushResult } from '@/sync/push';
 import { SessionError } from '@/sync/session';
 
-// Synchronisation (bouton « Synchroniser », déconnexion, reconnexion) : push puis pull.
+// Synchronisation : push puis pull. `syncNow` pour les appels explicites (bouton « Synchroniser »,
+// déconnexion, reconnexion), `requestSync` pour les déclencheurs automatiques (src/sync/autoSync.ts).
 // Verrou minimal : une seule synchronisation à la fois par compte (un appel pendant une
 // synchronisation renvoie la même promesse). État exposé par un store sans React (carte Compte).
 //
@@ -14,12 +15,24 @@ import { SessionError } from '@/sync/session';
 // téléphone) : après un échec passager, relance automatique avec délais croissants, tant que l'app
 // est ouverte. Pas de relance hors ligne (le retour du réseau s'en charge) ni si la session est
 // refusée (reconnexion requise). Un appel explicite remet le compteur à zéro.
+//
+// Déclencheurs automatiques (`requestSync`) : silencieux hors ligne (aucune requête, état inchangé,
+// la carte reste « en attente ») ; le démarrage et le retour du réseau synchronisent tout de suite
+// et remettent le compteur à zéro ; le premier plan et les écritures laissent faire la relance
+// programmée (elle enverra toute la file). Une écriture pendant une synchronisation en demande une
+// seconde à la fin (sinon elle attendrait le déclencheur suivant).
 
 export const OFFLINE_MESSAGE = 'Pas de connexion internet.';
 export const FAILED_MESSAGE = 'La synchronisation a échoué. Réessaie.';
 
 /** Délais des relances automatiques successives ; le dernier se répète. */
 export const RETRY_DELAYS_MS = [10_000, 30_000, 60_000, 5 * 60_000, 15 * 60_000];
+
+/** Retour au premier plan : pas de synchronisation si la dernière s'est terminée il y a moins. */
+export const FOREGROUND_MIN_INTERVAL_MS = 60_000;
+
+/** Déclencheurs automatiques (docs/STORAGE.md §3). */
+export type SyncTrigger = 'startup' | 'network' | 'foreground' | 'write';
 
 /** État de la synchronisation en cours ou de la dernière tentative (en mémoire uniquement). */
 export type SyncRunState = {
@@ -54,6 +67,10 @@ let running: { userId: string; promise: Promise<SyncResult> } | null = null;
 // Relances automatiques du compte : rang de la prochaine relance et minuteur programmé.
 let retry: { userId: string; step: number; timer: ReturnType<typeof setTimeout> | null } | null =
   null;
+// Seconde synchronisation demandée par une écriture faite pendant la synchronisation en cours.
+let followUp: string | null = null;
+// Fin (ms) de la dernière synchronisation terminée du compte, réussie ou non.
+let lastFinished: { userId: string; at: number } | null = null;
 const listeners = new Set<() => void>();
 
 function patchState(userId: string, patch: Partial<SyncRunState>) {
@@ -88,12 +105,61 @@ export function syncNow(
   options: SyncOptions = {},
   deps: SyncDeps = defaultDeps,
 ): Promise<SyncResult> {
-  cancelScheduledSync(userId);
+  cancelRetry(userId);
   return runLocked(db, userId, options, deps);
 }
 
-/** Annule la relance automatique programmée du compte (déconnexion, changement de compte). */
+/**
+ * Déclencheur automatique : synchronise si en ligne, selon les règles décrites en tête de fichier.
+ * Ne rejette jamais.
+ */
+export async function requestSync(
+  db: Database,
+  userId: string,
+  trigger: SyncTrigger,
+  deps: SyncDeps = defaultDeps,
+): Promise<void> {
+  if (!(await deps.isOnline())) return;
+
+  if (running?.userId === userId) {
+    if (trigger === 'write' && followUp !== userId) {
+      followUp = userId;
+      void running.promise.then((result) => {
+        if (followUp !== userId) return;
+        followUp = null;
+        // Échec : la relance programmée (ou le retour du réseau, la reconnexion) prend le relais.
+        if (result.ok) void requestSync(db, userId, 'write', deps);
+      });
+    }
+    return;
+  }
+
+  if (trigger === 'startup' || trigger === 'network') {
+    cancelRetry(userId);
+  } else {
+    if (retry?.userId === userId && retry.timer) return;
+    if (
+      trigger === 'foreground' &&
+      lastFinished?.userId === userId &&
+      Date.now() - lastFinished.at < FOREGROUND_MIN_INTERVAL_MS
+    ) {
+      return;
+    }
+  }
+  await runLocked(db, userId, {}, deps);
+}
+
+/**
+ * Annule la relance automatique programmée et la seconde synchronisation demandée du compte
+ * (déconnexion, changement de compte).
+ */
 export function cancelScheduledSync(userId: string): void {
+  if (followUp === userId) followUp = null;
+  cancelRetry(userId);
+}
+
+// Relance programmée annulée, compteur de délais remis à zéro.
+function cancelRetry(userId: string) {
   if (retry?.userId === userId) {
     if (retry.timer) clearTimeout(retry.timer);
     retry = null;
@@ -109,6 +175,7 @@ function runLocked(
 ): Promise<SyncResult> {
   if (running?.userId === userId) return running.promise;
   const promise: Promise<SyncResult> = runSync(db, userId, options, deps).finally(() => {
+    lastFinished = { userId, at: Date.now() };
     if (running?.promise === promise) running = null;
   });
   running = { userId, promise };

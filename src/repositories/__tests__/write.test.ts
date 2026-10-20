@@ -2,6 +2,7 @@ import { asc, eq } from 'drizzle-orm';
 
 import type { Database } from '@/db/client';
 import { categories, recurringOccurrences, syncQueue } from '@/db/schema';
+import { subscribeLocalWrites } from '@/repositories/localWrites';
 import {
   insertRow,
   nextTimestamp,
@@ -212,6 +213,53 @@ describe('writeTransaction', () => {
     expect(
       db.select().from(recurringOccurrences).where(eq(recurringOccurrences.userId, USER)).all(),
     ).toHaveLength(0);
+  });
+});
+
+describe('signal d’écriture locale', () => {
+  let written: string[];
+  let unsubscribe: () => void;
+
+  beforeEach(() => {
+    written = [];
+    unsubscribe = subscribeLocalWrites((userId) => written.push(userId));
+  });
+
+  afterEach(() => unsubscribe());
+
+  it('prévient une fois par transaction validée, avec le compte', () => {
+    insertRow(db, 'categories', USER, category);
+    writeTransaction(db, OTHER_USER, (w) => {
+      w.insert('categories', category);
+      w.insert('categories', { ...category, position: 2 });
+    });
+    expect(written).toEqual([USER, OTHER_USER]);
+  });
+
+  it('ne prévient pas si la transaction est annulée', () => {
+    expect(() =>
+      writeTransaction(db, USER, (w) => {
+        w.insert('categories', category);
+        throw new Error('annulée');
+      }),
+    ).toThrow('annulée');
+    expect(written).toEqual([]);
+  });
+
+  it('ne prévient pas sans entrée ajoutée à la file', () => {
+    writeTransaction(db, USER, () => undefined);
+    expect(written).toEqual([]);
+  });
+
+  it('une erreur d’abonné ne fait pas échouer l’écriture', () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const stop = subscribeLocalWrites(() => {
+      throw new Error('abonné');
+    });
+    expect(() => insertRow(db, 'categories', USER, category)).not.toThrow();
+    stop();
+    jest.restoreAllMocks();
+    expect(written).toEqual([USER]);
   });
 });
 
