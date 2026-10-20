@@ -1,13 +1,26 @@
 import type { Database } from '@/db/client';
+import { reportError } from '@/lib/errors';
 import { saveRemoteRows } from '@/repositories/remoteRows';
 import { setSetting } from '@/repositories/settings';
+import { insertRow } from '@/repositories/write';
 import { pullFromSupabase } from '@/sync/pull';
+import { syncNow } from '@/sync/syncNow';
 import { createTestDatabase } from '@/test/testDatabase';
 
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
+jest.mock('@/lib/errors', () => ({ reportError: jest.fn() }));
 jest.mock('@/sync/pull', () => ({ pullFromSupabase: jest.fn() }));
+jest.mock('@/sync/syncNow', () => ({ syncNow: jest.fn() }));
+jest.mock('expo-crypto', () => ({
+  randomUUID: () => jest.requireActual<typeof import('node:crypto')>('node:crypto').randomUUID(),
+}));
 
 const pull = jest.mocked(pullFromSupabase);
+const sync = jest.mocked(syncNow);
+const report = jest.mocked(reportError);
+
+// Laisse se terminer les promesses en arrière-plan (envoi de la file après le pull).
+const flush = () => new Promise((resolve) => setImmediate(resolve));
 
 const USER = 'user-a';
 const OTHER_USER = 'user-b';
@@ -38,6 +51,8 @@ beforeEach(() => {
   });
   ({ db, close } = createTestDatabase());
   pull.mockReset();
+  sync.mockReset();
+  report.mockReset();
   jest.spyOn(console, 'error').mockImplementation(() => undefined);
 });
 
@@ -104,6 +119,46 @@ describe('startInitialPull', () => {
     await first;
     expect(store.getInitialPullStatus(USER)).toBe('ready');
     expect(store.getInitialPullStatus(OTHER_USER)).toBeNull();
+  });
+});
+
+describe('envoi de la file après le pull initial', () => {
+  const addPending = () => insertRow(db, 'debt_people', USER, { name: 'Karim' });
+
+  it('n’envoie rien si la file est vide', async () => {
+    pull.mockImplementation(async () => addCategory(db));
+    await store.startInitialPull(db, USER);
+    await flush();
+    expect(sync).not.toHaveBeenCalled();
+  });
+
+  it('envoie la file laissée par une session précédente, en arrière-plan', async () => {
+    addPending();
+    pull.mockImplementation(async () => addCategory(db));
+    sync.mockResolvedValue({ ok: true });
+    await store.startInitialPull(db, USER);
+    await flush();
+    expect(sync).toHaveBeenCalledWith(db, USER);
+    expect(report).not.toHaveBeenCalled();
+  });
+
+  it('affiche un toast avec le nombre restant si l’envoi échoue', async () => {
+    addPending();
+    pull.mockImplementation(async () => addCategory(db));
+    sync.mockResolvedValue({ ok: false, reason: 'failed' });
+    await store.startInitialPull(db, USER);
+    await flush();
+    expect(report).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Synchronisation impossible : 1 élément en attente.' }),
+    );
+  });
+
+  it('n’envoie rien si le pull a échoué', async () => {
+    addPending();
+    pull.mockRejectedValue(new Error('Réseau coupé'));
+    await store.startInitialPull(db, USER);
+    await flush();
+    expect(sync).not.toHaveBeenCalled();
   });
 });
 

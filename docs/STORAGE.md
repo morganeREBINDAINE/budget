@@ -22,7 +22,7 @@ Modèle hors ligne d'abord, aligné sur `docs/PLAN.md` (phases 5 et 6).
 - Centralisée dans `src/sync/` ; aucun écran n'appelle Supabase directement.
 - **Push** : la file est vidée dans l'ordre, par lots, en `upsert` par `id` (relançable sans doublon) ; une entrée n'est retirée qu'après confirmation de Supabase.
 - **Pull** : récupération des lignes `updated_at > last_pulled_at` (restauration, réinstallation).
-- **Conflits** : la modification la plus récente gagne (`updated_at`).
+- **Conflits** : la modification la plus récente gagne (`updated_at`). Côté SQLite, le pull ne remplace une ligne que si la version distante est plus récente et qu'aucune modification locale n'attend dans `sync_queue` ; côté Supabase, le trigger `skip_stale_update` ignore une mise à jour qui n'est pas plus récente que la ligne en base.
 - **Déclencheurs** : démarrage de l'app, retour du réseau, retour au premier plan, après chaque écriture si en ligne, tâche de fond (`expo-background-task`), bouton « Synchroniser ».
 - Un verrou empêche deux synchronisations simultanées ; échecs relancés avec délais croissants, `last_error` conservée.
 - L'état (en attente, en cours %, à jour, erreur) est exposé par un store unique, affiché sur la page Compte.

@@ -1,6 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
-import { Pressable } from 'react-native';
 
 import {
   Badge,
@@ -8,6 +7,7 @@ import {
   Button,
   Card,
   Row,
+  Skeleton,
   Stack,
   Text,
   useTheme,
@@ -18,10 +18,10 @@ import { formatDateTime } from '@/lib/format';
 import type { SyncStatus } from '@/types/sync';
 
 type Props = {
-  status: SyncStatus;
+  // `null` : état pas encore connu (pull initial, lecture de la file) → skeletons.
+  status: SyncStatus | null;
+  // Promise : spinner et garde du bouton jusqu'à la fin de la synchronisation.
   onSync: () => Promise<unknown>;
-  // Phase 2 : un appui sur la carte passe à l'état factice suivant.
-  onPress?: () => void;
 };
 
 type StateStyle = {
@@ -71,50 +71,64 @@ const pendingText = (count: number) =>
 const lastSyncText = (iso: string | null) =>
   iso ? `Dernière synchro : ${formatDateTime(iso)}` : 'Jamais synchronisé';
 
-// Carte d'état de la synchronisation avec Supabase.
-export function SyncStatusCard({ status, onSync, onPress }: Props) {
+// Carte d'état de la synchronisation avec Supabase. Le bouton reste visible même « À jour » :
+// la synchronisation récupère aussi les changements faits ailleurs (pull).
+export function SyncStatusCard({ status, onSync }: Props) {
   const { colors, radius } = useTheme();
+  if (!status) return <SyncStatusCardSkeleton />;
   const s = STATES[status.state];
 
   return (
-    <Pressable onPress={onPress} accessibilityHint="Affiche l'état de synchro suivant">
-      <Card gap="lg">
-        <Row gap="md">
-          <Row
-            justify="center"
-            style={{
-              width: ICON_BOX,
-              height: ICON_BOX,
-              borderRadius: radius.md,
-              backgroundColor: colors[s.bg],
-            }}
-          >
-            <MaterialCommunityIcons name={s.icon} size={24} color={colors[s.fg]} />
-          </Row>
-          <Stack flex={1} gap="xxs">
-            <Text variant="heading">Synchronisation</Text>
-            <Text variant="bodySmall" color="textSecondary">
-              {status.state === 'synced'
-                ? lastSyncText(status.lastSyncedAt)
-                : pendingText(status.pendingCount)}
-            </Text>
-          </Stack>
-          <Badge label={s.label} variant={s.badge} />
+    <Card gap="lg">
+      <Row gap="md">
+        <Row
+          justify="center"
+          style={{
+            width: ICON_BOX,
+            height: ICON_BOX,
+            borderRadius: radius.md,
+            backgroundColor: colors[s.bg],
+          }}
+        >
+          <MaterialCommunityIcons name={s.icon} size={24} color={colors[s.fg]} />
         </Row>
+        <Stack flex={1} gap="xxs">
+          <Text variant="heading">Synchronisation</Text>
+          <Text variant="bodySmall" color="textSecondary">
+            {status.state === 'synced'
+              ? lastSyncText(status.lastSyncedAt)
+              : pendingText(status.pendingCount)}
+          </Text>
+        </Stack>
+        <Badge label={s.label} variant={s.badge} />
+      </Row>
 
-        <SyncDetail status={status} />
+      <SyncDetail status={status} />
 
-        {status.state !== 'synced' ? (
-          <Button
-            label={status.state === 'error' ? 'Réessayer' : 'Synchroniser'}
-            variant="secondary"
-            loading={status.state === 'syncing'}
-            onPress={onSync}
-            fullWidth
-          />
-        ) : null}
-      </Card>
-    </Pressable>
+      <Button
+        label={status.state === 'error' ? 'Réessayer' : 'Synchroniser'}
+        variant="secondary"
+        loading={status.state === 'syncing'}
+        onPress={onSync}
+        fullWidth
+      />
+    </Card>
+  );
+}
+
+// Pendant le pull initial : textes et badge remplacés, bouton masqué.
+function SyncStatusCardSkeleton() {
+  return (
+    <Card gap="lg" accessible accessibilityRole="progressbar" accessibilityLabel="Chargement">
+      <Row gap="md">
+        <Skeleton width={ICON_BOX} height={ICON_BOX} radius="md" />
+        <Stack flex={1} gap="xxs">
+          <Text variant="heading">Synchronisation</Text>
+          <Skeleton text="bodySmall" width="60%" />
+        </Stack>
+        <Skeleton width={72} height={24} radius="full" />
+      </Row>
+    </Card>
   );
 }
 

@@ -1,12 +1,17 @@
 import type { Database } from '@/db/client';
+import { reportError } from '@/lib/errors';
 import { hasLocalCategories } from '@/repositories/remoteRows';
 import { getSetting } from '@/repositories/settings';
+import { pendingSyncCount } from '@/repositories/syncQueue';
 import { pullFromSupabase } from '@/sync/pull';
+import { syncNow } from '@/sync/syncNow';
 
 // Pull initial d'un compte (store sans React) : lancé à chaque connexion Google, et au démarrage
 // tant que le compte n'a jamais été récupéré (`last_pulled_at` absent, ex. échec puis app fermée).
 // Pendant le pull, les écrans affichent des skeletons ; en cas d'échec, un bloc d'erreur
-// « Réessayer » ; les actions qui dépendent des données sont bloquées.
+// « Réessayer » ; les actions qui dépendent des données sont bloquées. Une fois les données
+// récupérées, les éléments laissés en file par une session précédente du compte partent en
+// arrière-plan (docs/STORAGE.md §4).
 
 export type InitialPullStatus = 'loading' | 'error' | 'ready';
 
@@ -59,7 +64,21 @@ async function runInitialPull(db: Database, userId: string): Promise<void> {
   } catch (e) {
     console.error('[sync] pull initial impossible', e);
     if (state?.userId === userId) setState({ userId, status: 'error' });
+    return;
   }
+  if (pendingSyncCount(db, userId) > 0) void pushPendingInBackground(db, userId);
+}
+
+async function pushPendingInBackground(db: Database, userId: string): Promise<void> {
+  const result = await syncNow(db, userId);
+  if (result.ok) return;
+  const n = pendingSyncCount(db, userId);
+  reportError({
+    scope: 'sync',
+    message: `Synchronisation impossible : ${n} élément${n > 1 ? 's' : ''} en attente.`,
+    error: result.reason,
+    key: 'sync:background',
+  });
 }
 
 /** Au démarrage : relance le pull d'un compte jamais récupéré, sinon le marque prêt. */

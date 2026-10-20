@@ -2,5 +2,5 @@
 export type SyncStatus =
   | { state: 'pending'; pendingCount: number; lastSyncedAt: string | null }
   | { state: 'syncing'; progress: number; pendingCount: number }
-  | { state: 'synced'; lastSyncedAt: string }
+  | { state: 'synced'; lastSyncedAt: string | null }
   | { state: 'error'; message: string; pendingCount: number; lastSyncedAt: string | null };

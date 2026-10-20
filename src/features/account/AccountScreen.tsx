@@ -13,13 +13,18 @@ import {
   Text,
   useTheme,
 } from '@/design-system';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useDatabase } from '@/db/DatabaseProvider';
+import { useAuth, useUserId } from '@/features/auth/AuthProvider';
 import { AppHeader } from '@/features/navigation/AppHeader';
 import { useInitialPull } from '@/features/sync/useInitialPull';
 import { fakeRequest } from '@/mocks/account';
+import { pendingSyncCount } from '@/repositories/syncQueue';
+import { syncNow } from '@/sync/syncNow';
 
 import { ProfileCard } from './components/ProfileCard';
+import { SyncStatusCard } from './components/SyncStatusCard';
 import { usePendingSyncCount } from './usePendingSyncCount';
+import { useSyncStatus } from './useSyncStatus';
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
@@ -52,8 +57,42 @@ export function AccountScreen() {
   const [importError, setImportError] = useState<string | null>(null);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
-  // Export et import bloqués pendant le pull initial (garde dans les handlers).
+  // Après un envoi incomplet avant déconnexion : raison affichée, second appui = déconnexion.
+  const [logoutBlocked, setLogoutBlocked] = useState<string | null>(null);
+  // Synchronisation, export et import bloqués pendant le pull initial (garde dans les handlers).
   const { ready } = useInitialPull();
+  const db = useDatabase();
+  const userId = useUserId();
+  const { status: syncStatus, sync } = useSyncStatus();
+
+  const syncData = useCallback(async () => {
+    if (!ready) return;
+    await sync();
+  }, [ready, sync]);
+
+  // Déconnexion (docs/STORAGE.md §4) : premier appui = envoi de la file si elle n'est pas vide
+  // (hors ligne : aucun appel). S'il reste des éléments, la modale reste ouverte avec la raison et
+  // le nombre restant ; le second appui déconnecte sans rien supprimer.
+  const confirmLogout = useCallback(async () => {
+    setLogoutError(null);
+    if (logoutBlocked === null && pendingSyncCount(db, userId) > 0) {
+      const result = await syncNow(db, userId, { pull: false });
+      if (pendingSyncCount(db, userId) > 0) {
+        setLogoutBlocked(
+          !result.ok && result.reason === 'offline'
+            ? 'Hors ligne : envoi impossible.'
+            : 'L’envoi n’a pas abouti.',
+        );
+        return;
+      }
+    }
+    try {
+      await signOut();
+    } catch (e) {
+      console.error('[auth] déconnexion impossible', e);
+      setLogoutError('La déconnexion a échoué. Réessaie.');
+    }
+  }, [db, userId, logoutBlocked, signOut]);
 
   const icon = (name: IconName, color = colors.primary) => (
     <MaterialCommunityIcons name={name} size={22} color={color} />
@@ -95,8 +134,8 @@ export function AccountScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Carte d'état de synchro réaffichée avec le moteur de synchro (phase 5). */}
         <ProfileCard name={account?.name ?? null} email={account?.email ?? null} />
+        <SyncStatusCard status={ready ? syncStatus : null} onSync={syncData} />
 
         <Stack gap="sm">
           <Text variant="label" color="textSecondary">
@@ -161,22 +200,18 @@ export function AccountScreen() {
       <ConfirmDialog
         visible={logoutOpen}
         title="Se déconnecter ?"
-        message={logoutMessage(pendingSync)}
-        confirmLabel="Se déconnecter"
+        message={
+          logoutBlocked
+            ? `${logoutBlocked} ${logoutMessage(pendingSync)}`
+            : logoutMessage(pendingSync)
+        }
+        confirmLabel={logoutBlocked ? 'Se déconnecter quand même' : 'Se déconnecter'}
         variant="danger"
-        // TODO(phase 5) : synchronisation complète tentée avant la déconnexion si en ligne.
-        onConfirm={async () => {
-          setLogoutError(null);
-          try {
-            await signOut();
-          } catch (e) {
-            console.error('[auth] déconnexion impossible', e);
-            setLogoutError('La déconnexion a échoué. Réessaie.');
-          }
-        }}
+        onConfirm={confirmLogout}
         onCancel={() => {
           setLogoutOpen(false);
           setLogoutError(null);
+          setLogoutBlocked(null);
         }}
         error={logoutError}
       />
