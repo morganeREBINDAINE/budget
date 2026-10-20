@@ -3,6 +3,7 @@ import { useEffect, useMemo } from 'react';
 
 import { useDatabase } from '@/db/DatabaseProvider';
 import { useUserId } from '@/features/auth/AuthProvider';
+import { reportError } from '@/lib/errors';
 import { pendingSyncCountQuery } from '@/repositories/syncQueue';
 
 type PendingSyncCount =
@@ -16,7 +17,13 @@ export function usePendingSyncCount(): PendingSyncCount {
   const { data, error, updatedAt } = useLiveQuery(query, [query]);
 
   useEffect(() => {
-    if (error) console.error('[sync] lecture de la file d’attente impossible', error);
+    if (error) {
+      reportError({
+        scope: 'sync',
+        message: 'Impossible de lire les éléments en attente de synchronisation.',
+        error,
+      });
+    }
   }, [error]);
 
   if (error) return { status: 'error' };

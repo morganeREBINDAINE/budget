@@ -139,3 +139,10 @@ Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, 
 - `size` : `sm` (40px, texte `heading`, défaut), `lg` (56px, texte `title`).
 - `variant` : `primary` (fond indigo, texte blanc, défaut), `neutral` (fond `primarySoft`, texte `primary`).
 - Props : `initials` (requis, déjà calculées, ex. `initials(name)` de `@/lib/format`), `size`, `variant`.
+
+### Toast
+
+- Bandeau de message temporaire, visuel seul : coins `radius.lg`, icône + texte blanc `body`, ombre `sm`, hauteur min. 48px, annoncé aux lecteurs d'écran (`accessibilityRole="alert"`).
+- `variant` : `error` (fond `danger`, icône alerte, défaut), `info` (fond `neutralStrong`, icône information).
+- Props : `message` (requis), `variant`.
+- Ne pas l'afficher directement : passer par `reportError` (`@/lib/errors`) ou `showToast` (`@/lib/toast`). Le `ToastHost` monté à la racine gère la file, la durée (3 s) et les doublons.

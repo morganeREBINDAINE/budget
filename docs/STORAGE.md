@@ -41,6 +41,7 @@ Modèle hors ligne d'abord, aligné sur `docs/PLAN.md` (phases 5 et 6).
 ## 5. Gestion des erreurs
 
 - Système de toast global et partagé : message compréhensible affiché pendant exactement **3 secondes** pour toute erreur pertinente (base locale, synchronisation, réseau, import).
+- Point d'entrée unique : `reportError({ scope, message, error })` (`src/lib/errors.ts`), qui journalise le détail technique et affiche le toast ; `showToast` (`src/lib/toast.ts`) pour un message sans erreur. Utilisables hors React (moteur de synchro, import).
 - Les erreurs liées à un formulaire restent affichées dans le formulaire (sous le champ ou au-dessus du bouton).
 - Ne jamais ignorer silencieusement une erreur, simuler un succès ou exposer des informations sensibles (pas de montants ni de notes dans les journaux ou Sentry).
 - Journaliser les détails techniques utiles et éviter les notifications en double pour une même erreur.

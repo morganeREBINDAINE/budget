@@ -17,3 +17,4 @@ export {
 export { Switch, type SwitchProps } from './Switch';
 export { Avatar, type AvatarProps, type AvatarSize, type AvatarVariant } from './Avatar';
 export { FormSectionList, type FormSectionListProps } from './FormSectionList';
+export { Toast, type ToastProps, type ToastVariant } from './Toast';

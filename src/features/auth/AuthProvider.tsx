@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { reportError } from '@/lib/errors';
 import { isOnline } from '@/lib/network';
 import { secureSessionStorage } from '@/lib/secureSessionStorage';
 import { AUTH_STORAGE_KEY, supabase } from '@/lib/supabase';
@@ -103,7 +104,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     loadLocalAccount()
       .catch((e: unknown) => {
-        console.error('[auth] lecture du compte local impossible', e);
+        reportError({
+          scope: 'auth',
+          message: 'Impossible de lire le compte enregistré sur cet appareil.',
+          error: e,
+        });
         return null;
       })
       .then((account) => {

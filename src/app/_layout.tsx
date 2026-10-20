@@ -18,6 +18,7 @@ import { ThemeProvider, useTheme } from '@/design-system';
 import { AuthProvider, useAuth } from '@/features/auth/AuthProvider';
 import { SupabaseAutoRefresh } from '@/features/auth/SupabaseAutoRefresh';
 import { DatabaseErrorScreen } from '@/features/db/DatabaseErrorScreen';
+import { ToastHost } from '@/features/feedback/ToastHost';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -46,6 +47,7 @@ export default function RootLayout() {
             <DatabaseProvider onSettled={markDbSettled} ErrorScreen={DatabaseErrorScreen}>
               <RootStack />
             </DatabaseProvider>
+            <ToastHost />
           </AuthProvider>
         </ThemeProvider>
       </KeyboardProvider>
