@@ -6,6 +6,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Card, Fab, FAB_AREA_HEIGHT, screenPadding, Stack, Text, useTheme } from '@/design-system';
 import { AppHeader } from '@/features/navigation/AppHeader';
+import { InitialPullError } from '@/features/sync/components/InitialPullError';
+import { LoadingRegion, RowSkeletonList } from '@/features/sync/components/Skeletons';
+import { useInitialPull } from '@/features/sync/useInitialPull';
 import { mockCategories } from '@/mocks/budget';
 import { mockNextDueDates, mockRecurringPayments } from '@/mocks/recurring';
 import type { RecurringPayment } from '@/types/budget';
@@ -13,9 +16,6 @@ import type { RecurringPayment } from '@/types/budget';
 import { RecurringRow } from './components/RecurringRow';
 
 const openPayment = (id: string) => router.push({ pathname: '/recurring/[id]', params: { id } });
-const addPayment = () => router.push('/recurring/new');
-// TODO(phase 7) : export JSON.
-const exportData = () => {};
 
 const NO_DUE_DATE = '9999-12-31';
 
@@ -37,6 +37,16 @@ export function RecurringListScreen() {
   // TODO(phase 3) : requête SQLite réactive + calcul des échéances (lib/recurring.ts).
   const payments = useMemo(() => sortPayments(mockRecurringPayments), []);
   const categoriesById = useMemo(() => new Map(mockCategories.map((c) => [c.id, c])), []);
+  // Pendant le pull initial : skeletons, et actions bloquées par un garde dans chaque handler.
+  const { status, ready, retry } = useInitialPull();
+  const addPayment = () => {
+    if (!ready) return;
+    router.push('/recurring/new');
+  };
+  // TODO(phase 7) : export JSON.
+  const exportData = () => {
+    if (!ready) return;
+  };
 
   const renderItem: ListRenderItem<RecurringPayment> = useCallback(
     ({ item }) => (
@@ -56,13 +66,13 @@ export function RecurringListScreen() {
         <AppHeader onExport={exportData} />
       </Stack>
       <FlatList
-        data={payments}
+        data={ready ? payments : []}
         keyExtractor={(p) => p.id}
         renderItem={renderItem}
         ListHeaderComponent={
           <Stack gap="xs" style={{ marginBottom: spacing.sm }}>
             <Text variant="title">Paiements réguliers</Text>
-            {payments.length > 0 ? (
+            {ready && payments.length > 0 ? (
               <Text variant="bodySmall" color="textSecondary">
                 À l&apos;échéance, un encart rouge s&apos;affiche sur l&apos;accueil jusqu&apos;à ce
                 que tu confirmes le paiement.
@@ -70,7 +80,17 @@ export function RecurringListScreen() {
             ) : null}
           </Stack>
         }
-        ListEmptyComponent={EmptyRecurring}
+        ListEmptyComponent={
+          status === 'error' ? (
+            <InitialPullError onRetry={retry} />
+          ) : !ready ? (
+            <LoadingRegion>
+              <RowSkeletonList />
+            </LoadingRegion>
+          ) : (
+            <EmptyRecurring />
+          )
+        }
         ItemSeparatorComponent={Separator}
         contentContainerStyle={{
           paddingHorizontal: screenPadding,

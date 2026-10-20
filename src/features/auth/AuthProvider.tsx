@@ -39,9 +39,9 @@ type AuthContextValue = {
   status: AuthState['status'];
   account: LocalAccount | null;
   needsReauth: boolean;
-  // `prepareAccount` : préparation des données locales du compte (ex. récupération des catégories),
-  // exécutée avant que le compte ne soit considéré connecté ; un échec annule la connexion.
-  signInWithGoogle: (prepareAccount: (userId: string) => Promise<void>) => Promise<SignInResult>;
+  // `onSignedIn` : appelé juste avant que le compte ne soit considéré connecté (ex. lancer le pull
+  // initial, dont les écrans affichent l'avancement).
+  signInWithGoogle: (onSignedIn: (userId: string) => void) => Promise<SignInResult>;
   signOut: () => Promise<void>;
 };
 
@@ -128,22 +128,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [setNeedsReauth]);
 
   const signInWithGoogle = useCallback(
-    async (prepareAccount: (userId: string) => Promise<void>): Promise<SignInResult> => {
+    async (onSignedIn: (userId: string) => void): Promise<SignInResult> => {
       const result = await googleSignIn();
       if (result.type !== 'success') return result;
 
       const account = accountFromUser(result.user);
-      try {
-        await prepareAccount(account.id);
-      } catch (e) {
-        console.error('[auth] préparation des données du compte impossible', e);
-        await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
-        await signOutFromGoogle().catch(() => undefined);
-        return {
-          type: 'error',
-          message: 'Impossible de récupérer tes catégories. Vérifie ta connexion et réessaie.',
-        };
-      }
       try {
         await saveLocalAccount(account);
       } catch (e) {
@@ -152,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { type: 'error', message: 'Impossible d’enregistrer le compte sur ce téléphone.' };
       }
       accountRef.current = account;
+      onSignedIn(account.id);
       setState({ status: 'signedIn', account, needsReauth: false });
       return { type: 'success' };
     },

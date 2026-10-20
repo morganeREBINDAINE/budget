@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDatabase } from '@/db/DatabaseProvider';
 import { Button, screenPadding, Stack, Text, useTheme } from '@/design-system';
 import { AppLogo } from '@/features/brand/AppLogo';
-import { pullCategories } from '@/sync/pullCategories';
+import { startInitialPull } from '@/sync/initialPull';
 
 import { useAuth } from './AuthProvider';
 import { GoogleLogo } from './GoogleLogo';
@@ -15,14 +15,14 @@ export function LoginScreen() {
   const db = useDatabase();
   const [error, setError] = useState<string | null>(null);
 
-  // Catégories créées par Supabase à la création du compte, récupérées avant d'entrer dans l'app.
-  const prepareAccount = useCallback((userId: string) => pullCategories(db, userId), [db]);
+  // Données du compte récupérées depuis Supabase une fois dans l'app (skeletons pendant le pull).
+  const pullAccount = useCallback((userId: string) => void startInitialPull(db, userId), [db]);
 
   // Promise renvoyée à Button : spinner et garde contre les doubles appuis.
   // En cas de succès, la garde de route (_layout) mène à l'accueil.
   const handleSignIn = async () => {
     setError(null);
-    const result = await signInWithGoogle(prepareAccount);
+    const result = await signInWithGoogle(pullAccount);
     if (result.type === 'error') setError(result.message);
   };
 

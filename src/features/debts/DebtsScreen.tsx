@@ -12,11 +12,15 @@ import {
   Row,
   screenPadding,
   SegmentedControl,
+  Skeleton,
   Stack,
   Text,
   useTheme,
 } from '@/design-system';
 import { AppHeader } from '@/features/navigation/AppHeader';
+import { InitialPullError } from '@/features/sync/components/InitialPullError';
+import { LoadingRegion, RowSkeletonList } from '@/features/sync/components/Skeletons';
+import { useInitialPull } from '@/features/sync/useInitialPull';
 import { formatAmount } from '@/lib/format';
 import type { DebtDirection } from '@/types/budget';
 
@@ -28,8 +32,6 @@ type SectionKey = 'active' | 'settled';
 type Section = { key: SectionKey; data: DebtItem[]; count: number };
 
 const openDebt = (id: string) => router.push({ pathname: '/debts/[id]', params: { id } });
-// TODO(phase 7) : export JSON.
-const exportData = () => {};
 
 const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
 
@@ -40,20 +42,31 @@ export function DebtsScreen() {
   const [direction, setDirection] = useState<DebtDirection>('owed_to_me');
   const [settledOpen, setSettledOpen] = useState(false);
   const { active, settled, totalRemainingDa } = useDebts(direction);
+  // Pendant le pull initial : skeletons, et actions bloquées par un garde dans chaque handler.
+  const { status, ready, retry } = useInitialPull();
 
-  const sections: Section[] = [
-    { key: 'active', data: active, count: active.length },
-    ...(settled.length > 0
-      ? [{ key: 'settled' as const, data: settledOpen ? settled : [], count: settled.length }]
-      : []),
-  ];
+  const sections: Section[] = !ready
+    ? []
+    : [
+        { key: 'active', data: active, count: active.length },
+        ...(settled.length > 0
+          ? [{ key: 'settled' as const, data: settledOpen ? settled : [], count: settled.length }]
+          : []),
+      ];
 
   const renderItem: SectionListRenderItem<DebtItem, Section> = useCallback(
     ({ item }) => <DebtRow item={item} onPress={openDebt} />,
     [],
   );
 
-  const addDebt = () => router.push({ pathname: '/debts/new', params: { direction } });
+  const addDebt = () => {
+    if (!ready) return;
+    router.push({ pathname: '/debts/new', params: { direction } });
+  };
+  // TODO(phase 7) : export JSON.
+  const exportData = () => {
+    if (!ready) return;
+  };
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
@@ -66,7 +79,20 @@ export function DebtsScreen() {
         keyExtractor={(i) => i.debt.id}
         renderItem={renderItem}
         ListHeaderComponent={
-          <TotalRemaining direction={direction} amountDa={totalRemainingDa} count={active.length} />
+          status === 'error' ? (
+            <InitialPullError onRetry={retry} />
+          ) : !ready ? (
+            <LoadingRegion>
+              <TotalRemainingSkeleton direction={direction} />
+              <RowSkeletonList />
+            </LoadingRegion>
+          ) : (
+            <TotalRemaining
+              direction={direction}
+              amountDa={totalRemainingDa}
+              count={active.length}
+            />
+          )
         }
         renderSectionHeader={({ section }) =>
           section.key === 'settled' ? (
@@ -119,6 +145,19 @@ function TotalRemaining({ direction, amountDa, count }: TotalProps) {
       <Text variant="bodySmall" color="textSecondary">
         {count === 0 ? 'Aucune dette en cours' : `${plural(count, 'dette')} en cours`}
       </Text>
+    </Card>
+  );
+}
+
+function TotalRemainingSkeleton({ direction }: { direction: DebtDirection }) {
+  const { spacing } = useTheme();
+  return (
+    <Card radius="xl" gap="xs" style={{ marginBottom: spacing.lg }}>
+      <Text variant="label" color="textSecondary">
+        {direction === 'i_owe' ? 'Reste à payer' : 'Reste à recevoir'}
+      </Text>
+      <Skeleton text="display" width="60%" />
+      <Skeleton text="bodySmall" width="40%" />
     </Card>
   );
 }

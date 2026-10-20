@@ -146,3 +146,10 @@ Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, 
 - `variant` : `error` (fond `danger`, icône alerte, défaut), `info` (fond `neutralStrong`, icône information).
 - Props : `message` (requis), `variant`.
 - Ne pas l'afficher directement : passer par `reportError` (`@/lib/errors`) ou `showToast` (`@/lib/toast`). Le `ToastHost` monté à la racine gère la file, la durée (3 s) et les doublons.
+
+### Skeleton
+
+- Bloc gris (`surfaceMuted`) pulsant qui remplace une donnée pendant son chargement (pull initial, premier chargement) : montant, ligne de liste, graphique. Pulsation d'opacité (`motion.duration.slow` × 2, aller-retour), coupée si l'utilisateur a réduit les animations.
+- Props : `width` (px ou %, défaut 100 %), `height` (px, défaut 16), `text` (`TypographyVariant` : ligne de texte factice à la taille de la police, centrée dans la hauteur de ligne), `circle` (diamètre : pastille, anneau), `radius` (`RadiusToken`, défaut `sm`), `style`.
+- Masqué aux lecteurs d'écran : le conteneur de la zone en chargement porte l'annonce (`accessibilityRole="progressbar"`, ex. `LoadingRegion` de `features/sync`).
+- Ne remplacer que les parties variables : la mise en page, les titres et les éléments fixes restent visibles (règle de `CLAUDE.md`, « Requêtes asynchrones »).

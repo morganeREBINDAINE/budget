@@ -15,6 +15,7 @@ import {
 } from '@/design-system';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { AppHeader } from '@/features/navigation/AppHeader';
+import { useInitialPull } from '@/features/sync/useInitialPull';
 import { fakeRequest } from '@/mocks/account';
 
 import { ProfileCard } from './components/ProfileCard';
@@ -51,6 +52,8 @@ export function AccountScreen() {
   const [importError, setImportError] = useState<string | null>(null);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
+  // Export et import bloqués pendant le pull initial (garde dans les handlers).
+  const { ready } = useInitialPull();
 
   const icon = (name: IconName, color = colors.primary) => (
     <MaterialCommunityIcons name={name} size={22} color={color} />
@@ -58,13 +61,14 @@ export function AccountScreen() {
 
   // TODO(phase 7) : écrire le fichier JSON puis ouvrir la feuille de partage.
   const exportData = useCallback(async () => {
+    if (!ready) return;
     setActionError(null);
     try {
       await fakeRequest();
     } catch {
       setActionError("L'export a échoué. Réessaie.");
     }
-  }, []);
+  }, [ready]);
 
   // TODO(phase 7) : choisir le fichier, valider, remplacer les données locales.
   const importData = useCallback(async () => {
@@ -111,16 +115,19 @@ export function AccountScreen() {
               icon={icon('tray-arrow-down')}
               onPress={exportData}
               showChevron={false}
+              disabled={!ready}
             />
             <ListItem
               label="Importer"
               description="Remplace toutes les données"
               icon={icon('tray-arrow-up')}
               onPress={() => {
+                if (!ready) return;
                 setImportError(null);
                 setImportOpen(true);
               }}
               showChevron={false}
+              disabled={!ready}
             />
           </Card>
           {actionError ? (

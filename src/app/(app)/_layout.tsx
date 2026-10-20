@@ -1,8 +1,11 @@
 import { Stack } from 'expo-router';
-import type { ComponentProps } from 'react';
+import { useEffect, type ComponentProps } from 'react';
 
+import { useDatabase } from '@/db/DatabaseProvider';
 import { useTheme } from '@/design-system';
+import { useUserId } from '@/features/auth/AuthProvider';
 import { MenuProvider } from '@/features/navigation/MenuProvider';
+import { resumeInitialPull } from '@/sync/initialPull';
 
 // L'accueil reste la première route de la pile : sans ça, la première route déclarée
 // ci-dessous (transaction/new) deviendrait l'écran initial après connexion.
@@ -10,6 +13,10 @@ export const unstable_settings = { initialRouteName: 'index' };
 
 export default function AppLayout() {
   const { colors } = useTheme();
+  const db = useDatabase();
+  const userId = useUserId();
+  // Compte jamais récupéré sur ce téléphone (ex. échec du pull puis app fermée) : on relance.
+  useEffect(() => resumeInitialPull(db, userId), [db, userId]);
   // La feuille (fond assombri + animation) est dessinée par <Sheet> dans l'écran lui-même.
   const sheet: ComponentProps<typeof Stack.Screen>['options'] = {
     presentation: 'transparentModal',

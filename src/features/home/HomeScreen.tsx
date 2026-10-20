@@ -5,11 +5,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { screenPadding, Stack, useTheme } from '@/design-system';
 import { AppHeader } from '@/features/navigation/AppHeader';
 import { PayDueDialog } from '@/features/recurring/components/PayDueDialog';
+import { useInitialPull } from '@/features/sync/useInitialPull';
 import { currentYearMonth, shiftMonth, type YearMonth } from '@/lib/format';
 import { mockDuePayments } from '@/mocks/recurring';
 import type { DuePayment } from '@/types/budget';
 
 import { FabGroup } from './components/FabGroup';
+import { HomeSkeleton } from './components/HomeSkeleton';
 import { MonthPager } from './components/MonthPager';
 import { MonthSelector } from './components/MonthSelector';
 import { MonthPage } from './MonthPage';
@@ -20,21 +22,25 @@ export function HomeScreen() {
   // TODO(phase 3) : échéances dues calculées par lib/recurring.ts.
   const [duePayments, setDuePayments] = useState<DuePayment[]>(mockDuePayments);
   const [paying, setPaying] = useState<DuePayment | null>(null);
+  // Pendant le pull initial : skeletons, et actions bloquées par un garde dans chaque handler.
+  const { status, ready, retry } = useInitialPull();
 
-  const addIncome = useCallback(
-    () => router.push({ pathname: '/transaction/new', params: { type: 'income' } }),
-    [],
-  );
-  const addExpense = useCallback(
-    () => router.push({ pathname: '/transaction/new', params: { type: 'expense' } }),
-    [],
-  );
+  const addIncome = useCallback(() => {
+    if (!ready) return;
+    router.push({ pathname: '/transaction/new', params: { type: 'income' } });
+  }, [ready]);
+  const addExpense = useCallback(() => {
+    if (!ready) return;
+    router.push({ pathname: '/transaction/new', params: { type: 'expense' } });
+  }, [ready]);
   const openTransaction = useCallback(
     (id: string) => router.push({ pathname: '/transaction/[id]', params: { id } }),
     [],
   );
   // TODO(phase 7) : export JSON.
-  const exportData = useCallback(() => {}, []);
+  const exportData = useCallback(() => {
+    if (!ready) return;
+  }, [ready]);
 
   const markPaid = useCallback((paid: DuePayment) => {
     setDuePayments((list) =>
@@ -66,7 +72,11 @@ export function HomeScreen() {
           onNext={() => setMonth((m) => shiftMonth(m, 1))}
         />
       </Stack>
-      <MonthPager month={month} onChange={setMonth} renderPage={renderPage} />
+      {ready ? (
+        <MonthPager month={month} onChange={setMonth} renderPage={renderPage} />
+      ) : (
+        <HomeSkeleton month={month} onRetry={status === 'error' ? retry : undefined} />
+      )}
       <FabGroup onAddIncome={addIncome} onAddExpense={addExpense} />
       <PayDueDialog
         key={paying ? `${paying.payment.id}-${paying.dueDate}` : 'closed'}

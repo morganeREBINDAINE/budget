@@ -43,6 +43,8 @@ Pour toutes les requêtes asynchrones, les règles suivantes s'appliquent :
 - Le trigger doit être bloqué tant que la requête est en cours, via un garde dans le handler et pas seulement disabled.
 - Si la requête échoue, afficher une erreur claire à l'utilisateur.
 - Si la requête doit être retry, utiliser trigger.dev.
+- Chargement de données affichées dans un écran (premier chargement, synchronisation initiale, pull) : afficher des skeletons (Skeleton de @/design-system) à la place des seules parties variables (montants, listes, graphiques, textes issus des données), en gardant visibles la mise en page, la barre haute et les éléments fixes. Jamais de gros spinner plein écran ni d’overlay pour un chargement de données. Le spinner reste réservé au bouton qui déclenche une action, l’overlay aux actions bloquantes.
+- Pendant ce chargement, les actions qui dépendent des données sont bloquées par un garde dans le handler (pas seulement disabled).
 
 ### Avant de créer un nouveau composant UI
 
