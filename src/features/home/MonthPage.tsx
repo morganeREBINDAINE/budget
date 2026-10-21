@@ -45,6 +45,18 @@ export const MonthPage = memo(function MonthPage({
 
   const header = (
     <Stack gap="xl" style={{ marginBottom: spacing.lg }}>
+
+      {summary.expenseDa > 0 && (
+        <CategoryChart totals={summary.byCategory} totalDa={summary.expenseDa} />
+      )}
+      {duePayments.length > 0 && (
+        <Stack gap="md">
+          {/* Quelques encarts au plus : rendus dans l'en-tête de la liste virtualisée. */}
+          {duePayments.map((due) => (
+            <DuePaymentBanner key={`${due.payment.id}-${due.dueDate}`} due={due} onPay={onPayDue} />
+          ))}
+        </Stack>
+      )}
       <Row gap="md" align="stretch">
         <TotalCard
           kind="income"
@@ -57,17 +69,6 @@ export const MonthPage = memo(function MonthPage({
           subtitle={plural(summary.expenseCount, 'dépense')}
         />
       </Row>
-      {summary.expenseDa > 0 && (
-        <CategoryChart totals={summary.byCategory} totalDa={summary.expenseDa} />
-      )}
-      {duePayments.length > 0 && (
-        <Stack gap="md">
-          {/* Quelques encarts au plus : rendus dans l'en-tête de la liste virtualisée. */}
-          {duePayments.map((due) => (
-            <DuePaymentBanner key={`${due.payment.id}-${due.dueDate}`} due={due} onPay={onPayDue} />
-          ))}
-        </Stack>
-      )}
       <Row gap="sm" align="baseline">
         <Text variant="title">Détail</Text>
         <Text variant="body" color="textMuted">
