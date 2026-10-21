@@ -26,6 +26,7 @@ const deps = (overrides: Partial<SyncDeps> = {}): SyncDeps => ({
   isOnline: jest.fn(async () => true),
   push: jest.fn(async () => NOTHING),
   pull: jest.fn(async () => undefined),
+  requestTimeouts: () => 0,
   ...overrides,
 });
 
@@ -106,6 +107,33 @@ describe('syncNow', () => {
       error: store.FAILED_MESSAGE,
     });
     expect(getSetting(db, USER, 'last_synced_at')).toBeNull();
+  });
+
+  it('requête restée sans réponse : message dédié et relance programmée', async () => {
+    jest.useFakeTimers();
+    // Une annulation antérieure à la synchro ne compte pas.
+    let timeouts = 3;
+    const d = deps({
+      requestTimeouts: () => timeouts,
+      push: jest.fn(async () => {
+        timeouts += 1;
+        throw new Error('AbortError: Aborted');
+      }),
+    });
+    await expect(store.syncNow(db, USER, {}, d)).resolves.toEqual({
+      ok: false,
+      reason: 'failed',
+    });
+    expect(store.getSyncRunState(USER)).toMatchObject({
+      running: false,
+      error: store.TIMEOUT_MESSAGE,
+      nextRetryAt: expect.any(String),
+    });
+
+    // Échec suivant sans annulation : message habituel.
+    jest.mocked(d.push).mockRejectedValueOnce(new Error('503'));
+    await store.syncNow(db, USER, {}, d);
+    expect(store.getSyncRunState(USER)?.error).toBe(store.FAILED_MESSAGE);
   });
 
   it('expose l’avancement du push pendant la synchro', async () => {

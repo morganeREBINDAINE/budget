@@ -1,5 +1,6 @@
 import type { Database } from '@/db/client';
 import { reportError } from '@/lib/errors';
+import { getRequestTimeoutCount } from '@/lib/fetchWithTimeout';
 import { isOnline } from '@/lib/network';
 import { setSetting } from '@/repositories/settings';
 import { pullFromSupabase } from '@/sync/pull';
@@ -26,6 +27,8 @@ import { SessionError } from '@/sync/session';
 export const OFFLINE_MESSAGE = 'Pas de connexion internet.';
 export const FAILED_MESSAGE = 'La synchronisation a échoué. Réessaie.';
 export const SESSION_MESSAGE = 'Session expirée : reconnexion requise.';
+// Une requête est restée sans réponse (annulée par fetchWithTimeout) : relancée comme un échec.
+export const TIMEOUT_MESSAGE = 'Le serveur ne répond pas.';
 
 /** Délais des relances automatiques successives ; le dernier se répète. */
 export const RETRY_DELAYS_MS = [10_000, 30_000, 60_000, 5 * 60_000, 15 * 60_000];
@@ -62,9 +65,16 @@ export type SyncDeps = {
   isOnline: () => Promise<boolean>;
   push: (db: Database, userId: string, onProgress?: PushProgress) => Promise<PushResult>;
   pull: (db: Database, userId: string) => Promise<void>;
+  // Nombre de requêtes annulées faute de réponse (message dédié si l'échec en vient).
+  requestTimeouts: () => number;
 };
 
-const defaultDeps: SyncDeps = { isOnline, push: pushToSupabase, pull: pullFromSupabase };
+const defaultDeps: SyncDeps = {
+  isOnline,
+  push: pushToSupabase,
+  pull: pullFromSupabase,
+  requestTimeouts: getRequestTimeoutCount,
+};
 
 let state: SyncRunState | null = null;
 let running: { userId: string; promise: Promise<SyncResult> } | null = null;
@@ -224,6 +234,7 @@ async function runSync(
     return { ok: false, reason: 'offline' };
   }
 
+  const timeoutsBefore = deps.requestTimeouts();
   try {
     const pushed = await deps.push(db, userId, (done, total) =>
       patchState(userId, { progress: total === 0 ? 1 : done / total }),
@@ -241,7 +252,8 @@ async function runSync(
       patchState(userId, { running: false, error: SESSION_MESSAGE, sessionRefused: true });
       return { ok: false, reason: 'session' };
     }
-    patchState(userId, { running: false, error: FAILED_MESSAGE });
+    const timedOut = deps.requestTimeouts() > timeoutsBefore;
+    patchState(userId, { running: false, error: timedOut ? TIMEOUT_MESSAGE : FAILED_MESSAGE });
     scheduleRetry(db, userId, deps);
     return { ok: false, reason: 'failed' };
   }

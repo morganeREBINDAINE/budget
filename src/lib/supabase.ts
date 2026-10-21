@@ -3,6 +3,7 @@ import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 
 import { env } from './env';
+import { fetchWithTimeout } from './fetchWithTimeout';
 import { secureSessionStorage } from './secureSessionStorage';
 
 // Clé fixe de la session stockée : relue par AuthProvider (session expirée hors ligne) et
@@ -11,7 +12,9 @@ export const AUTH_STORAGE_KEY = 'budget-auth-session';
 
 // Client Supabase unique. Réservé à l'auth et à src/sync/ : les écrans lisent SQLite (docs/STORAGE.md).
 // Session persistée chiffrée (lisible hors ligne) ; pas de détection dans l'URL (connexion native, sans redirection).
+// Requêtes annulées après 30 s sans réponse (fetchWithTimeout : aucun délai par défaut sur Android).
 export const supabase = createClient(env.supabaseUrl, env.supabasePublishableKey, {
+  global: { fetch: fetchWithTimeout },
   auth: {
     storage: secureSessionStorage,
     storageKey: AUTH_STORAGE_KEY,
