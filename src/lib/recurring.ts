@@ -6,7 +6,8 @@ import type { DuePayment, RecurringFrequency, RecurringPayment } from '@/types/b
 // - une échéance par période (mois, ou année en annuel), jour 31 → dernier jour du mois,
 //   29 février → 28 hors année bissextile ;
 // - aucune échéance avant la date de début ni avant la création du paiement (pas d'arriéré
-//   à la création, ni à la réactivation : la date de début est alors ramenée à aujourd'hui) ;
+//   à la création, ni à la réactivation). La date de début n'est pas saisie : l'éditeur la fixe à
+//   aujourd'hui à la création et à la réactivation d'un paiement inactif ;
 // - une occurrence payée couvre toute sa période : changer le jour ou le mois d'un paiement
 //   déjà payé ne fait pas réapparaître d'encart. Les occurrences et dépenses enregistrées ne
 //   sont jamais modifiées.
@@ -144,14 +145,15 @@ export type RecurringValues = {
 };
 
 export type RecurringErrors = Partial<
-  Record<'name' | 'amount' | 'category' | 'day' | 'month' | 'startDate', string>
+  Record<'name' | 'amount' | 'category' | 'day' | 'month', string>
 >;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Valide la saisie : nom (1 à 30 caractères), montant entier de 1 à MAX_AMOUNT_DA, catégorie
- * existante, jour 1–31, mois 1–12 en annuel (null en mensuel), date de début valide.
+ * existante, jour 1–31, mois 1–12 en annuel (null en mensuel). La date de début est fixée par
+ * l'éditeur (pas de saisie) : une date invalide est une erreur de programmation.
  */
 export function validateRecurring(
   input: RecurringInput,
@@ -177,7 +179,8 @@ export function validateRecurring(
   const yearly = input.frequency === 'yearly';
   if (yearly && (input.month === null || input.month < 1 || input.month > 12))
     errors.month = 'Choisis un mois.';
-  if (!ISO_DATE.test(input.startDate)) errors.startDate = 'Choisis une date de début.';
+  if (!ISO_DATE.test(input.startDate))
+    throw new Error(`Date de début invalide : ${input.startDate}`);
 
   if (Object.keys(errors).length > 0 || amount === null || day === null || !input.categoryId) {
     return { ok: false, errors };

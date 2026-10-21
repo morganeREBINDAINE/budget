@@ -27,7 +27,6 @@ import { LoadingRegion } from '@/features/sync/components/Skeletons';
 import { useInitialPull } from '@/features/sync/useInitialPull';
 import { AmountInput } from '@/features/transaction/components/AmountInput';
 import { CategoryGrid } from '@/features/transaction/components/CategoryGrid';
-import { DateField } from '@/features/transaction/components/DateField';
 import { toIsoDate } from '@/lib/format';
 import {
   isRecurringUnchanged,
@@ -171,7 +170,6 @@ function RecurringForm({
   const [frequency, setFrequency] = useState<RecurringFrequency>(payment?.frequency ?? 'monthly');
   const [day, setDay] = useState<number | null>(payment?.dayOfMonth ?? now.getDate());
   const [month, setMonth] = useState<number | null>(payment?.month ?? now.getMonth() + 1);
-  const [startDate, setStartDate] = useState(payment?.startDate ?? today);
   const [active, setActive] = useState(payment?.active ?? true);
   const [note, setNote] = useState(payment?.note ?? '');
   const [errors, setErrors] = useState<Errors>({});
@@ -186,6 +184,10 @@ function RecurringForm({
   // Écriture SQLite synchrone (quasi instantanée) : pas de spinner, garde contre le double appui.
   const save = () => {
     if (writing.current) return;
+    // Date de début interne (pas de champ) : aujourd'hui à la création et à la réactivation
+    // d'un paiement inactif (pas d'arriéré pour la période d'inactivité), inchangée sinon.
+    const reactivated = payment !== undefined && !payment.active && active;
+    const startDate = !payment || reactivated ? today : payment.startDate;
     const result = validateRecurring(
       { name, amount, categoryId, frequency, dayOfMonth: day, month, startDate, active, note },
       new Set(categories.map((c) => c.id)),
@@ -312,17 +314,6 @@ function RecurringForm({
           error={errors.day}
         />
 
-        <DateField
-          label="Date de début"
-          value={startDate}
-          onChange={(d) => {
-            setStartDate(d);
-            clearError('startDate');
-          }}
-          hint="Aucune échéance avant cette date, ni avant la création du paiement."
-          error={errors.startDate}
-        />
-
         <Card>
           <Switch
             label="Actif"
@@ -334,11 +325,6 @@ function RecurringForm({
             value={active}
             onValueChange={(v) => {
               setActive(v);
-              // Réactivation : pas d'arriéré pour la période d'inactivité, la date de début
-              // repart d'aujourd'hui (modifiable avant d'enregistrer).
-              if (payment && !payment.active) {
-                setStartDate(v && payment.startDate < today ? today : payment.startDate);
-              }
               clearError('submit');
             }}
           />
