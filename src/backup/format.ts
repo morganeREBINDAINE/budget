@@ -7,12 +7,11 @@ import type { SyncedRow } from '@/repositories/write';
 import { toIso, toRemote, type RemoteRow } from '@/sync/columns';
 
 // Format de la sauvegarde JSON complète (docs/PLAN.md, phase 7) :
-// `{ version, exported_at, user_id, account_email, categories[], transactions[], … }`.
+// `{ version, exported_at, categories[], transactions[], … }`.
 // Colonnes en snake_case (mêmes noms que Supabase), lignes non supprimées uniquement, sans
-// `user_id` ni `deleted_at` par ligne (rattachées au compte connecté à l'import). `user_id` en tête
-// de fichier indique le compte d'origine : un fichier d'un autre compte reçoit de nouveaux ids à
-// l'import (les ids sont uniques dans tout Supabase). Le fichier est validé en entier avant tout
-// import ; les messages d'erreur ne citent jamais de montant ni de note.
+// `user_id` ni `deleted_at` : aucun lien avec un compte, l'import recrée toutes les lignes avec de
+// nouveaux ids dans le compte connecté (transfert possible d'un compte à l'autre). Le fichier est
+// validé en entier avant tout import ; les messages d'erreur ne citent jamais de montant ni de note.
 
 export const BACKUP_VERSION = 1;
 
@@ -26,9 +25,6 @@ export type BackupRows = { [T in SyncedTableName]: BackupRow<T>[] };
 /** Contenu d'une sauvegarde, lignes en camelCase comme en local. */
 export type Backup = {
   exportedAt: string;
-  /** Compte d'origine du fichier. */
-  userId: string;
-  accountEmail: string | null;
   rows: BackupRows;
 };
 
@@ -36,8 +32,6 @@ export type Backup = {
 export type BackupFile = {
   version: number;
   exported_at: string;
-  user_id: string;
-  account_email: string | null;
 } & Record<SyncedTableName, RemoteRow[]>;
 
 export type ParseBackupResult = { ok: true; backup: Backup } | { ok: false; error: string };
@@ -47,8 +41,6 @@ export function toBackupFile(backup: Backup): BackupFile {
   const file = {
     version: BACKUP_VERSION,
     exported_at: backup.exportedAt,
-    user_id: backup.userId,
-    account_email: backup.accountEmail,
   } as BackupFile;
   for (const tableName of SYNCED_TABLES) {
     file[tableName] = (backup.rows[tableName] as Record<string, unknown>[]).map((row) => {
@@ -310,7 +302,7 @@ function checkRows(rows: BackupRows): void {
   });
 }
 
-const HEADER_KEYS = new Set(['version', 'exported_at', 'user_id', 'account_email']);
+const HEADER_KEYS = new Set(['version', 'exported_at']);
 
 function parseFile(data: unknown): Backup {
   if (!isPlainObject(data)) fail('fichier', 'objet JSON attendu');
@@ -319,11 +311,7 @@ function parseFile(data: unknown): Backup {
       fail(key, 'champ inconnu');
     }
   }
-  const { exported_at: exportedAt, user_id: userId, account_email: accountEmail } = data;
-  if (typeof userId !== 'string' || !UUID.test(userId)) fail('user_id', 'identifiant invalide');
-  if (accountEmail !== null && typeof accountEmail !== 'string') {
-    fail('account_email', 'texte attendu');
-  }
+  const exportedAt = parseTimestamp('exported_at', data.exported_at);
 
   const rows = {} as Record<SyncedTableName, unknown[]>;
   for (const tableName of SYNCED_TABLES) {
@@ -334,12 +322,7 @@ function parseFile(data: unknown): Backup {
   const backupRows = rows as unknown as BackupRows;
   checkRows(backupRows);
 
-  return {
-    exportedAt: parseTimestamp('exported_at', exportedAt),
-    userId,
-    accountEmail: accountEmail ?? null,
-    rows: backupRows,
-  };
+  return { exportedAt, rows: backupRows };
 }
 
 /**
@@ -373,4 +356,21 @@ export function parseBackup(text: string): ParseBackupResult {
     }
     throw e;
   }
+}
+
+/** Contenu d'une sauvegarde affiché avant l'import. */
+export type BackupSummary = {
+  exportedAt: string;
+  transactions: number;
+  recurringPayments: number;
+  debts: number;
+};
+
+export function summarizeBackup(backup: Backup): BackupSummary {
+  return {
+    exportedAt: backup.exportedAt,
+    transactions: backup.rows.transactions.length,
+    recurringPayments: backup.rows.recurring_payments.length,
+    debts: backup.rows.debts.length,
+  };
 }

@@ -19,17 +19,12 @@ export class SharingUnavailableError extends Error {
  * le même jour remplace le précédent) puis ouvre la feuille de partage Android. Fermer la feuille
  * sans choisir de destination n'est pas une erreur.
  */
-export async function exportBackup(
-  db: Database,
-  userId: string,
-  accountEmail: string | null,
-  now = new Date(),
-): Promise<void> {
+export async function exportBackup(db: Database, userId: string, now = new Date()): Promise<void> {
   if (!(await Sharing.isAvailableAsync())) throw new SharingUnavailableError();
 
   const file = new File(Paths.cache, `budget-${toIsoDate(now)}.json`);
   file.create({ overwrite: true });
-  file.write(serializeBackup(readBackup(db, userId, accountEmail, now)));
+  file.write(serializeBackup(readBackup(db, userId, now)));
 
   await Sharing.shareAsync(file.uri, {
     mimeType: 'application/json',

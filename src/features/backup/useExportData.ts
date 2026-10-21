@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 import { useDatabase } from '@/db/DatabaseProvider';
-import { useAuth, useUserId } from '@/features/auth/AuthProvider';
+import { useUserId } from '@/features/auth/AuthProvider';
 import { useInitialPull } from '@/features/sync/useInitialPull';
 import { reportError } from '@/lib/errors';
 
@@ -31,12 +31,10 @@ function errorMessage(e: unknown): string {
 export function useExportData({ errorDisplay }: { errorDisplay: ErrorDisplay }): ExportData {
   const db = useDatabase();
   const userId = useUserId();
-  const { account } = useAuth();
   const { ready } = useInitialPull();
   const inFlight = useRef(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const email = account?.email ?? null;
 
   const exportData = useCallback(async () => {
     if (!ready || inFlight.current) return;
@@ -44,7 +42,7 @@ export function useExportData({ errorDisplay }: { errorDisplay: ErrorDisplay }):
     setExporting(true);
     setError(null);
     try {
-      await exportBackup(db, userId, email);
+      await exportBackup(db, userId);
     } catch (e) {
       const message = errorMessage(e);
       if (errorDisplay === 'toast') {
@@ -57,7 +55,7 @@ export function useExportData({ errorDisplay }: { errorDisplay: ErrorDisplay }):
       inFlight.current = false;
       setExporting(false);
     }
-  }, [ready, db, userId, email, errorDisplay]);
+  }, [ready, db, userId, errorDisplay]);
 
   return { exportData, exporting, error };
 }
