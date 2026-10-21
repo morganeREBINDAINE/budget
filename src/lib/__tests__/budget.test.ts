@@ -39,9 +39,8 @@ describe('summarizeMonth', () => {
     expect(summarizeMonth([], [voiture])).toMatchObject({
       transactions: [],
       incomeDa: 0,
-      incomeCount: 0,
       expenseDa: 0,
-      expenseCount: 0,
+      balanceDa: 0,
       byCategory: [],
       orphanExpenses: [],
     });
@@ -60,9 +59,8 @@ describe('summarizeMonth', () => {
     expect(summary.transactions).toBe(transactions);
     expect(summary).toMatchObject({
       incomeDa: 320000,
-      incomeCount: 2,
       expenseDa: 30000,
-      expenseCount: 3,
+      balanceDa: 290000,
       orphanExpenses: [],
     });
     expect(summary.byCategory).toEqual([
@@ -77,7 +75,7 @@ describe('summarizeMonth', () => {
     const summary = summarizeMonth([tx('expense', 300, 'voiture'), orphan], [voiture]);
 
     expect(summary.expenseDa).toBe(1000);
-    expect(summary.expenseCount).toBe(2);
+    expect(summary.balanceDa).toBe(-1000);
     expect(summary.byCategory).toEqual([{ category: voiture, amountDa: 300 }]);
     expect(summary.orphanExpenses).toEqual([orphan]);
   });

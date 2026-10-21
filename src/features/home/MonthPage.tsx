@@ -11,8 +11,8 @@ import type { Category, DuePayment, Transaction } from '@/types/budget';
 import { CategoryChart } from './components/CategoryChart';
 import { EmptyState } from './components/EmptyState';
 import { HomeSkeleton } from './components/HomeSkeleton';
+import { MonthBalanceCard } from './components/MonthBalanceCard';
 import { OrphanExpensesNotice } from './components/OrphanExpensesNotice';
-import { TotalCard } from './components/TotalCard';
 import { TransactionRow } from './components/TransactionRow';
 import { useMonthSummary } from './useMonthSummary';
 
@@ -29,8 +29,6 @@ type Props = {
 
 type ContentProps = Omit<Props, 'categories'> & { summary: MonthSummary };
 
-const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
-
 // Page d'un mois : skeletons au premier chargement, bloc d'erreur si la lecture locale échoue.
 export const MonthPage = memo(function MonthPage({ categories, ...rest }: Props) {
   const summary = useMonthSummary(rest.month, categories);
@@ -39,7 +37,7 @@ export const MonthPage = memo(function MonthPage({ categories, ...rest }: Props)
   return <MonthContent summary={summary.data} {...rest} />;
 });
 
-// Contenu défilant d'un mois : cartes Entrées / Dépenses, graphique, échéances dues, liste « Détail ».
+// Contenu défilant d'un mois : bilan du mois, graphique, échéances dues, liste « Détail ».
 function MonthContent({
   month,
   summary,
@@ -78,18 +76,7 @@ function MonthContent({
           ))}
         </Stack>
       )}
-      <Row gap="md" align="stretch">
-        <TotalCard
-          kind="income"
-          amountDa={summary.incomeDa}
-          subtitle={plural(summary.incomeCount, 'versement')}
-        />
-        <TotalCard
-          kind="expense"
-          amountDa={summary.expenseDa}
-          subtitle={plural(summary.expenseCount, 'dépense')}
-        />
-      </Row>
+      <MonthBalanceCard amounts={summary} />
       <Row gap="sm" align="baseline">
         <Text variant="title">Détail</Text>
         <Text variant="body" color="textMuted">

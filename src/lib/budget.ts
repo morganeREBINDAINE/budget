@@ -7,9 +7,9 @@ export type MonthSummary = {
   transactions: Transaction[];
   categoriesById: Map<string, Category>;
   incomeDa: number;
-  incomeCount: number;
   expenseDa: number;
-  expenseCount: number;
+  // Reste du mois : entrées − dépenses (négatif si dépassement), sans report des mois précédents.
+  balanceDa: number;
   // Dépenses par catégorie (montant > 0), de la plus grosse à la plus petite.
   byCategory: CategoryTotal[];
   // Dépenses dont la catégorie est introuvable (données incohérentes) : comptées dans
@@ -40,13 +40,15 @@ export function summarizeMonth(transactions: Transaction[], categories: Category
     .filter((c) => c.amountDa > 0)
     .sort((a, b) => b.amountDa - a.amountDa);
 
+  const incomeDa = sum(incomes);
+  const expenseDa = sum(expenses);
+
   return {
     transactions,
     categoriesById,
-    incomeDa: sum(incomes),
-    incomeCount: incomes.length,
-    expenseDa: sum(expenses),
-    expenseCount: expenses.length,
+    incomeDa,
+    expenseDa,
+    balanceDa: incomeDa - expenseDa,
     byCategory,
     orphanExpenses,
   };

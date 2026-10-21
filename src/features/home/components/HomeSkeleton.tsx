@@ -15,6 +15,8 @@ import { InitialPullError } from '@/features/sync/components/InitialPullError';
 import { LoadingRegion, RowSkeletonList } from '@/features/sync/components/Skeletons';
 import { formatMonth, type YearMonth } from '@/lib/format';
 
+import { MonthBalanceCard } from './MonthBalanceCard';
+
 type Props = {
   month: YearMonth;
   // Échec du pull : bloc d'erreur (« Réessayer » ou reconnexion) à la place des skeletons.
@@ -55,10 +57,7 @@ export function HomeSkeleton({ month, failed = false, readError = false }: Props
               <Skeleton text="bodySmall" width={72} />
             </Row>
           </Card>
-          <Row gap="md" align="stretch">
-            <TotalCardSkeleton label="Entrées" />
-            <TotalCardSkeleton label="Dépenses" />
-          </Row>
+          <MonthBalanceCard />
           <Stack gap="lg">
             <Row gap="sm" align="baseline">
               <Text variant="title">Détail</Text>
@@ -71,17 +70,5 @@ export function HomeSkeleton({ month, failed = false, readError = false }: Props
         </LoadingRegion>
       )}
     </ScrollView>
-  );
-}
-
-function TotalCardSkeleton({ label }: { label: string }) {
-  return (
-    <Card flex={1} gap="sm" radius="xl">
-      <Text variant="label" color="textSecondary">
-        {label}
-      </Text>
-      <Skeleton text="title" width="70%" />
-      <Skeleton text="bodySmall" width="50%" />
-    </Card>
   );
 }
