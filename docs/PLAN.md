@@ -299,15 +299,15 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 
 ## Phase 8 — Sentry
 
-- [ ] `@sentry/react-native` + plugin Expo, envoi des source maps via EAS.
+- [x] `@sentry/react-native` + plugin Expo (`app.json` : organisation `hijra-projects`, projet `budget`, région EU `https://de.sentry.io/`), Metro `getSentryExpoConfig` (Debug IDs), envoi des source maps au build release (local ou EAS) avec `SENTRY_AUTH_TOKEN` (token d'organisation, secret, jamais `EXPO_PUBLIC_`). DSN public `EXPO_PUBLIC_SENTRY_DSN` vérifié dans `src/lib/env.ts`. Init dans `src/lib/monitoring.ts`, importé en premier par `index.ts` (erreurs de la tâche de fond comprises), `Sentry.wrap` sur la racine. Confidentialité : `sendDefaultPii: false`, ni tracing ni Session Replay, breadcrumbs `console` écartés, valeurs recopiées par Postgres (« Failing row contains (…) », « Key (…)=(…) ») masquées dans tout l'événement (`src/lib/monitoringScrub.ts`, testé) ; compte identifié par son id Supabase seul (`setUser({ id })` à la connexion, effacé à la déconnexion). Data Scrubber et non-stockage des IP activés côté projet Sentry. Nouveau development build requis.
 - [ ] Capturer les erreurs de synchro et d'import (sans montants ni notes dans les messages).
-- [ ] Désactivé en développement.
+- [x] Désactivé en développement (`enabled: !__DEV__`).
 
 ## Phase 9 — Build et livraison
 
 - [ ] `eas.json` : profils `development` et `production` (APK).
 - [ ] Google Cloud : second client OAuth Android avec la SHA-1 du keystore EAS (`eas credentials`), sinon la connexion Google échoue (`DEVELOPER_ERROR`) dans l'APK EAS.
-- [ ] Secrets EAS (Supabase, Google Web Client ID, Sentry).
+- [ ] Secrets EAS (Supabase, Google Web Client ID, Sentry : `EXPO_PUBLIC_SENTRY_DSN` et `SENTRY_AUTH_TOKEN` en secret).
 - [ ] EAS Update configuré (canal `production`).
 - [ ] Installer l'APK sur le téléphone et passer la checklist de recette.
 

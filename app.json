@@ -38,7 +38,15 @@
       "@react-native-community/datetimepicker",
       "expo-sqlite",
       "expo-secure-store",
-      "expo-background-task"
+      "expo-background-task",
+      [
+        "@sentry/react-native",
+        {
+          "url": "https://de.sentry.io/",
+          "organization": "hijra-projects",
+          "project": "budget"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

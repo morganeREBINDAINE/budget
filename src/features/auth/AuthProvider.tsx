@@ -12,6 +12,7 @@ import {
 
 import { unregisterBackgroundSync } from '@/features/sync/backgroundSync';
 import { reportError } from '@/lib/errors';
+import { setMonitoringUser } from '@/lib/monitoring';
 import { isOnline } from '@/lib/network';
 import { secureSessionStorage } from '@/lib/secureSessionStorage';
 import { AUTH_STORAGE_KEY, supabase } from '@/lib/supabase';
@@ -63,6 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Lus par le listener Supabase sans le réabonner.
   const accountRef = useRef<LocalAccount | null>(null);
   const signingOutRef = useRef(false);
+
+  const accountId = state.status === 'signedIn' ? state.account.id : null;
+  useEffect(() => setMonitoringUser(accountId), [accountId]);
 
   const setNeedsReauth = useCallback((needsReauth: boolean) => {
     setState((current) =>

@@ -19,10 +19,11 @@ import { AuthProvider, useAuth } from '@/features/auth/AuthProvider';
 import { SupabaseAutoRefresh } from '@/features/auth/SupabaseAutoRefresh';
 import { DatabaseErrorScreen } from '@/features/db/DatabaseErrorScreen';
 import { ToastHost } from '@/features/feedback/ToastHost';
+import { withMonitoring } from '@/lib/monitoring';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function RootLayout() {
   const [loaded, error] = useFonts({
     PlusJakartaSans_400Regular,
     PlusJakartaSans_500Medium,
@@ -54,6 +55,9 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+// Capture les erreurs de rendu et les appuis (breadcrumbs : noms de composants, sans texte).
+export default withMonitoring(RootLayout);
 
 function SplashGate({ dbSettled }: { dbSettled: boolean }) {
   const { status } = useAuth();

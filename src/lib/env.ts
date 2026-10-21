@@ -37,8 +37,15 @@ if (!googleWebClientId.endsWith('.apps.googleusercontent.com')) {
   );
 }
 
+// DSN Sentry : identifiant public (lisible dans l'APK), n'autorise que l'envoi d'événements.
+const sentryDsn = required('EXPO_PUBLIC_SENTRY_DSN', process.env.EXPO_PUBLIC_SENTRY_DSN);
+if (!/^https:\/\/[^@]+@[^/]+\/\d+$/.test(sentryDsn)) {
+  throw new Error('EXPO_PUBLIC_SENTRY_DSN invalide : format https://<clé>@<hôte>/<projet>.');
+}
+
 export const env = {
   supabaseUrl,
   supabasePublishableKey,
   googleWebClientId,
+  sentryDsn,
 } as const;
