@@ -15,6 +15,7 @@ import {
 } from '@/design-system';
 import { useDatabase } from '@/db/DatabaseProvider';
 import { useAuth, useUserId } from '@/features/auth/AuthProvider';
+import { useExportData } from '@/features/backup/useExportData';
 import { AppHeader } from '@/features/navigation/AppHeader';
 import { useInitialPull } from '@/features/sync/useInitialPull';
 import { fakeRequest } from '@/mocks/account';
@@ -52,7 +53,6 @@ export function AccountScreen() {
   const { colors, spacing } = useTheme();
   const { account, signOut } = useAuth();
   const pendingSync = usePendingSyncCount();
-  const [actionError, setActionError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [logoutOpen, setLogoutOpen] = useState(false);
@@ -66,6 +66,8 @@ export function AccountScreen() {
   const db = useDatabase();
   const userId = useUserId();
   const { status: syncStatus, sync, reconnect, reconnectError } = useSyncStatus();
+  // Une seule instance pour l'icône de la barre haute et la ligne « Exporter » (garde partagée).
+  const { exportData, exporting, error: exportError } = useExportData({ errorDisplay: 'inline' });
 
   const syncData = useCallback(async () => {
     if (!ready) return;
@@ -109,17 +111,6 @@ export function AccountScreen() {
     <MaterialCommunityIcons name={name} size={22} color={color} />
   );
 
-  // TODO(phase 7) : écrire le fichier JSON puis ouvrir la feuille de partage.
-  const exportData = useCallback(async () => {
-    if (!ready) return;
-    setActionError(null);
-    try {
-      await fakeRequest();
-    } catch {
-      setActionError("L'export a échoué. Réessaie.");
-    }
-  }, [ready]);
-
   // TODO(phase 7) : choisir le fichier, valider, remplacer les données locales.
   const importData = useCallback(async () => {
     setImportError(null);
@@ -134,7 +125,7 @@ export function AccountScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack style={{ paddingHorizontal: screenPadding }}>
-        <AppHeader onExport={exportData} />
+        <AppHeader onExport={exportData} exporting={exporting} />
       </Stack>
       <ScrollView
         contentContainerStyle={{
@@ -185,9 +176,9 @@ export function AccountScreen() {
               disabled={!ready}
             />
           </Card>
-          {actionError ? (
+          {exportError ? (
             <Text variant="bodySmall" color="danger" accessibilityLiveRegion="polite">
-              {actionError}
+              {exportError}
             </Text>
           ) : null}
         </Stack>

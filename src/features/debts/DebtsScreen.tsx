@@ -21,6 +21,7 @@ import { ReadErrorCard } from '@/features/db/ReadErrorCard';
 import { AppHeader } from '@/features/navigation/AppHeader';
 import { InitialPullError } from '@/features/sync/components/InitialPullError';
 import { LoadingRegion, RowSkeletonList } from '@/features/sync/components/Skeletons';
+import { useExportData } from '@/features/backup/useExportData';
 import { useInitialPull } from '@/features/sync/useInitialPull';
 import { formatAmount } from '@/lib/format';
 import type { DebtDirection } from '@/types/budget';
@@ -69,15 +70,12 @@ export function DebtsScreen() {
     if (!ready) return;
     router.push({ pathname: '/debts/new', params: { direction } });
   };
-  // TODO(phase 7) : export JSON.
-  const exportData = () => {
-    if (!ready) return;
-  };
+  const { exportData, exporting } = useExportData({ errorDisplay: 'toast' });
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack gap="lg" style={{ paddingHorizontal: screenPadding }}>
-        <AppHeader onExport={exportData} />
+        <AppHeader onExport={exportData} exporting={exporting} />
         <SegmentedControl options={DIRECTION_OPTIONS} value={direction} onChange={setDirection} />
       </Stack>
       <SectionList

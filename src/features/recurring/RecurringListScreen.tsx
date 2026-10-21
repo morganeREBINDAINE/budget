@@ -11,6 +11,7 @@ import { ReadErrorCard } from '@/features/db/ReadErrorCard';
 import { AppHeader } from '@/features/navigation/AppHeader';
 import { InitialPullError } from '@/features/sync/components/InitialPullError';
 import { LoadingRegion, RowSkeletonList } from '@/features/sync/components/Skeletons';
+import { useExportData } from '@/features/backup/useExportData';
 import { useInitialPull } from '@/features/sync/useInitialPull';
 import { toIsoDate } from '@/lib/format';
 import { nextDueDate } from '@/lib/recurring';
@@ -76,10 +77,7 @@ export function RecurringListScreen() {
     if (!ready) return;
     router.push('/recurring/new');
   };
-  // TODO(phase 7) : export JSON.
-  const exportData = () => {
-    if (!ready) return;
-  };
+  const { exportData, exporting } = useExportData({ errorDisplay: 'toast' });
 
   const renderItem: ListRenderItem<Item> = useCallback(
     ({ item }) => (
@@ -96,7 +94,7 @@ export function RecurringListScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack style={{ paddingHorizontal: screenPadding }}>
-        <AppHeader onExport={exportData} />
+        <AppHeader onExport={exportData} exporting={exporting} />
       </Stack>
       <FlatList
         data={ready ? items : []}
