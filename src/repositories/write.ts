@@ -1,8 +1,13 @@
-import { and, eq, getTableColumns, isNotNull, isNull, type SQL } from 'drizzle-orm';
+import { and, eq, getTableColumns, isNull, type SQL } from 'drizzle-orm';
 import { randomUUID } from 'expo-crypto';
 
 import type { Database } from '@/db/client';
-import { syncedTables, syncQueue, type SyncedTableName } from '@/db/schema';
+import {
+  syncedTables,
+  syncQueue,
+  type HardDeletableTableName,
+  type SyncedTableName,
+} from '@/db/schema';
 import { notifyLocalWrite } from '@/repositories/localWrites';
 
 // Outil d'écriture commun (docs/STORAGE.md §2) : toute écriture d'une table synchronisée passe par
@@ -40,12 +45,24 @@ export class RowNotFoundError extends Error {
   }
 }
 
+export type InsertOptions = {
+  /** Date de création conservée (import d'une sauvegarde) ; défaut : maintenant. */
+  createdAt?: string;
+};
+
 export type Writer = {
-  insert<T extends SyncedTableName>(tableName: T, values: InsertValues<T>): SyncedRow<T>;
+  insert<T extends SyncedTableName>(
+    tableName: T,
+    values: InsertValues<T>,
+    options?: InsertOptions,
+  ): SyncedRow<T>;
   update<T extends SyncedTableName>(tableName: T, id: string, patch: UpdatePatch<T>): SyncedRow<T>;
   softDelete<T extends SoftDeletableTableName>(tableName: T, id: string): SyncedRow<T>;
-  /** Annule la suppression logique d'une ligne du compte ; `RowNotFoundError` si elle n'est pas supprimée. */
-  restore<T extends SoftDeletableTableName>(tableName: T, id: string): SyncedRow<T>;
+  /**
+   * Suppression définitive (docs/STORAGE.md §2, exception) d'une ligne du compte : la ligne est
+   * effacée et une entrée `delete` part dans la file. `RowNotFoundError` si elle n'existe pas.
+   */
+  hardDelete(tableName: HardDeletableTableName, id: string): void;
 };
 
 // Requêtes génériques : Drizzle ne sait pas typer une union de tables, les types précis sont
@@ -114,12 +131,18 @@ function createWriter(
   };
 
   return {
-    insert(tableName, values) {
+    insert(tableName, values, options) {
       ensureOpen();
       const id = randomUUID();
       const at = nextTimestamp();
       tx.insert(tableOf(tableName))
-        .values({ ...values, id, userId, createdAt: at, updatedAt: at } as never)
+        .values({
+          ...values,
+          id,
+          userId,
+          createdAt: options?.createdAt ?? at,
+          updatedAt: at,
+        } as never)
         .run();
       return enqueue(tableName, id, at);
     },
@@ -147,15 +170,26 @@ function createWriter(
       return enqueue(tableName, id, at);
     },
 
-    restore(tableName, id) {
+    hardDelete(tableName, id) {
       ensureOpen();
       const table = tableOf(tableName);
-      const deleted = and(eq(table.id, id), eq(table.userId, userId), isNotNull(table.deletedAt));
-      const existing = tx.select().from(table).where(deleted).get();
-      if (!existing) throw new RowNotFoundError(tableName);
-      const at = nextTimestamp(existing.updatedAt);
-      tx.update(table).set({ updatedAt: at, deletedAt: null }).where(deleted).run();
-      return enqueue(tableName, id, at);
+      const own = and(eq(table.id, id), eq(table.userId, userId));
+      if (!tx.select({ id: table.id }).from(table).where(own).get()) {
+        throw new RowNotFoundError(tableName);
+      }
+      tx.delete(table).where(own).run();
+      tx.insert(syncQueue)
+        .values({
+          id: randomUUID(),
+          userId,
+          tableName,
+          rowId: id,
+          op: 'delete',
+          payload: { id, userId },
+          createdAt: nextTimestamp(),
+        })
+        .run();
+      onEnqueue();
     },
   };
 }

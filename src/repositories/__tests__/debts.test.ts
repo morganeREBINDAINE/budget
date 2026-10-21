@@ -151,16 +151,24 @@ describe('deleteDebt', () => {
     expect(people()).toEqual(['Karim']);
   });
 
-  it('nom d’une personne supprimée : elle est restaurée (index unique des noms)', () => {
+  it('personne sans dette : supprimée définitivement, un nom ressaisi crée une nouvelle personne', () => {
     const debt = createDebt(db, USER, 'owed_to_me', debtValues({ personName: 'Karim' }));
     const personId = debt.personId;
     tick();
     deleteDebt(db, USER, debt.id);
+    expect(allPeople()).toEqual([]);
+    expect(
+      db
+        .select()
+        .from(syncQueue)
+        .all()
+        .filter((e) => e.tableName === 'debt_people' && e.op === 'delete')
+        .map((e) => e.rowId),
+    ).toEqual([personId]);
     tick();
     const again = createDebt(db, USER, 'owed_to_me', debtValues({ personName: 'karim' }));
 
-    expect(again.personId).toBe(personId);
-    expect(allPeople()).toHaveLength(1);
+    expect(again.personId).not.toBe(personId);
     expect(people()).toEqual(['karim']);
   });
 });

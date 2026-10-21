@@ -13,9 +13,9 @@ import {
 import type { Debt, DebtDirection, DebtRepayment } from '@/types/budget';
 
 // Dettes, personnes et remboursements : lectures réactives et écritures via l'outil commun.
-// Une personne n'existe que tant qu'une dette la référence : créée (ou restaurée) à
-// l'enregistrement d'une dette, supprimée quand sa dernière dette disparaît ou change de personne.
-// L'index unique des noms compte aussi les personnes supprimées : un nom déjà connu est restauré.
+// Une personne n'existe que tant qu'une dette la référence : créée à l'enregistrement d'une dette,
+// supprimée définitivement (docs/STORAGE.md §2, exception) quand sa dernière dette disparaît ou
+// change de personne. Un nom ressaisi crée une nouvelle personne.
 
 const moneyColumns = <T extends typeof debts | typeof debtRepayments>(t: T) => ({
   id: t.id,
@@ -57,12 +57,12 @@ export function debtQuery(db: Database, userId: string, id: string) {
     .limit(1);
 }
 
-/** Personnes non supprimées du compte, par nom (autocomplétion, noms des dettes). */
+/** Personnes du compte, par nom (autocomplétion, noms des dettes). */
 export function peopleQuery(db: Database, userId: string) {
   return db
     .select({ id: debtPeople.id, name: debtPeople.name })
     .from(debtPeople)
-    .where(and(eq(debtPeople.userId, userId), isNull(debtPeople.deletedAt)))
+    .where(eq(debtPeople.userId, userId))
     .orderBy(asc(debtPeople.name));
 }
 
@@ -96,28 +96,10 @@ export function repaymentQuery(db: Database, userId: string, id: string) {
     .limit(1);
 }
 
-// Id de la personne portant ce nom : existante, restaurée si supprimée, sinon créée.
+// Id de la personne portant ce nom : existante, sinon créée.
 function resolvePerson(db: Database, userId: string, w: Writer, name: string): string {
-  const all = db
-    .select({ id: debtPeople.id, name: debtPeople.name, deletedAt: debtPeople.deletedAt })
-    .from(debtPeople)
-    .where(eq(debtPeople.userId, userId))
-    .all();
-  const active = findPerson(
-    all.filter((p) => p.deletedAt === null),
-    name,
-  );
-  if (active) return active.id;
-  const deleted = findPerson(
-    all.filter((p) => p.deletedAt !== null),
-    name,
-  );
-  if (deleted) {
-    w.restore('debt_people', deleted.id);
-    if (deleted.name !== name) w.update('debt_people', deleted.id, { name });
-    return deleted.id;
-  }
-  return w.insert('debt_people', { name }).id;
+  const existing = findPerson(peopleQuery(db, userId).all(), name);
+  return existing ? existing.id : w.insert('debt_people', { name }).id;
 }
 
 // Supprime la personne si aucune autre dette (hors `exceptDebtId`) ne la référence.
@@ -136,7 +118,7 @@ function dropPersonIfUnused(
     .get();
   if (other) return;
   try {
-    w.softDelete('debt_people', personId);
+    w.hardDelete('debt_people', personId);
   } catch (error) {
     // Déjà supprimée (ex. par une synchro) : rien à faire.
     if (!(error instanceof RowNotFoundError)) throw error;

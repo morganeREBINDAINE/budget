@@ -14,8 +14,11 @@ import { requireSession } from '@/sync/session';
 
 // Push (docs/STORAGE.md §3) : vide la file `sync_queue` du compte dans l'ordre d'écriture, par lots.
 // Chaque table d'un lot part en un upsert par id (relançable sans doublon ; côté Supabase, le trigger
-// skip_stale_update ignore une version qui n'est pas plus récente). Une entrée n'est retirée de la
-// file qu'après confirmation de Supabase.
+// skip_stale_update ignore une version qui n'est pas plus récente). Les suppressions définitives
+// (entrées `delete`, HARD_DELETABLE_TABLES) partent avant les upserts de la même table : elles
+// libèrent les valeurs uniques (ex. nom d'une personne recréée). Supprimer une ligne déjà absente
+// n'est pas une erreur (relançable). Une entrée n'est retirée de la file qu'après confirmation de
+// Supabase.
 //
 // Erreurs :
 // - refus de la ligne (donnée invalide pour le serveur : renvoyer la même ligne échouera toujours) :
@@ -56,6 +59,9 @@ const messageOf = (e: unknown) => (e instanceof Error ? e.message : 'Envoi impos
 /** Envoie des lignes (snake_case) d'une table ; rejette en cas d'échec (`PushError` si classé). */
 export type UpsertRows = (tableName: SyncedTableName, rows: RemoteRow[]) => Promise<void>;
 
+/** Supprime définitivement des lignes d'une table par id ; rejette comme `UpsertRows`. */
+export type DeleteRows = (tableName: SyncedTableName, ids: string[]) => Promise<void>;
+
 /** Avancement : entrées traitées / total au départ (le total grandit si on écrit pendant l'envoi). */
 export type PushProgress = (done: number, total: number) => void;
 
@@ -72,11 +78,28 @@ const upsertToSupabase: UpsertRows = async (tableName, rows) => {
   }
 };
 
-// Une ligne à envoyer : sa dernière version et toutes ses entrées du lot.
-type PendingRow = { rowId: string; payload: Record<string, unknown>; entryIds: string[] };
+const deleteFromSupabase =
+  (userId: string): DeleteRows =>
+  async (tableName, ids) => {
+    const { error } = await supabase.from(tableName).delete().eq('user_id', userId).in('id', ids);
+    if (error) {
+      throw new PushError(
+        `Suppression impossible (${tableName}, ${error.code || 'réseau'})`,
+        classifyErrorCode(error.code),
+      );
+    }
+  };
+
+// Une ligne à envoyer : sa dernière opération (version ou suppression) et toutes ses entrées du lot.
+type PendingRow = {
+  rowId: string;
+  op: SyncQueueRow['op'];
+  payload: Record<string, unknown>;
+  entryIds: string[];
+};
 
 // Regroupe un lot par table puis par ligne : une ligne écrite plusieurs fois n'est envoyée qu'une
-// fois, dans sa dernière version (Postgres refuse de modifier deux fois la même ligne d'un upsert).
+// fois, dans sa dernière opération (Postgres refuse de modifier deux fois la même ligne d'un upsert).
 function groupByTable(batch: SyncQueueRow[]): Map<SyncedTableName, PendingRow[]> {
   const groups = new Map<SyncedTableName, Map<string, PendingRow>>();
   for (const entry of batch) {
@@ -87,21 +110,31 @@ function groupByTable(batch: SyncQueueRow[]): Map<SyncedTableName, PendingRow[]>
     }
     const row = rows.get(entry.rowId);
     if (row) {
+      row.op = entry.op;
       row.payload = entry.payload;
       row.entryIds.push(entry.id);
     } else {
-      rows.set(entry.rowId, { rowId: entry.rowId, payload: entry.payload, entryIds: [entry.id] });
+      rows.set(entry.rowId, {
+        rowId: entry.rowId,
+        op: entry.op,
+        payload: entry.payload,
+        entryIds: [entry.id],
+      });
     }
   }
   return new Map([...groups].map(([tableName, rows]) => [tableName, [...rows.values()]]));
 }
 
-/** Envoie toute la file du compte (hors entrées mises de côté). `upsert` est remplaçable (tests). */
+/**
+ * Envoie toute la file du compte (hors entrées mises de côté). `upsert` et `remove` sont
+ * remplaçables (tests).
+ */
 export async function pushAll(
   db: Database,
   userId: string,
   upsert: UpsertRows = upsertToSupabase,
   onProgress?: PushProgress,
+  remove: DeleteRows = deleteFromSupabase(userId),
 ): Promise<PushResult> {
   let total = sendableSyncCount(db, userId);
   const result: PushResult = { sent: 0, rejected: 0 };
@@ -134,9 +167,20 @@ export async function pushAll(
   };
 
   // Envoi sans lever : l'appelant décide selon la nature de l'erreur.
-  const tryUpsert = async (tableName: SyncedTableName, rows: RemoteRow[]) => {
+  type Item = { row: PendingRow; remote: RemoteRow };
+  const trySend = async (tableName: SyncedTableName, op: PendingRow['op'], items: Item[]) => {
     try {
-      await upsert(tableName, rows);
+      if (op === 'delete') {
+        await remove(
+          tableName,
+          items.map((item) => item.row.rowId),
+        );
+      } else {
+        await upsert(
+          tableName,
+          items.map((item) => item.remote),
+        );
+      }
       return { ok: true as const };
     } catch (error) {
       return { ok: false as const, error };
@@ -157,46 +201,51 @@ export async function pushAll(
 
     for (const [tableName, rows] of groupByTable(batch)) {
       // Payload local inconvertible (autre compte, colonne inconnue) : refus sans envoi.
-      const toSend: { row: PendingRow; remote: RemoteRow }[] = [];
+      const toSend: Item[] = [];
       for (const row of rows) {
         try {
           if (row.payload.userId !== userId) {
             throw new Error(`Entrée d’un autre compte (${tableName})`);
           }
-          toSend.push({ row, remote: toRemote(tableName, row.payload) });
+          toSend.push({
+            row,
+            remote: row.op === 'delete' ? {} : toRemote(tableName, row.payload),
+          });
         } catch (e) {
           reject(row, e);
           markProcessed(row);
         }
       }
-      if (toSend.length === 0) continue;
 
-      const grouped = await tryUpsert(
-        tableName,
-        toSend.map((item) => item.remote),
-      );
-      if (grouped.ok) {
-        sent(
-          tableName,
-          toSend.map((item) => item.row),
-        );
-        toSend.forEach((item) => markProcessed(item.row));
-        continue;
-      }
-      if (!isRejection(grouped.error)) stop(grouped.error);
-      if (toSend.length === 1) {
-        reject(toSend[0].row, grouped.error);
-        markProcessed(toSend[0].row);
-        continue;
-      }
+      // Suppressions d'abord, puis versions.
+      for (const op of ['delete', 'upsert'] as const) {
+        const items = toSend.filter((item) => item.row.op === op);
+        if (items.length === 0) continue;
 
-      // Refus d'un envoi groupé : renvoi ligne par ligne pour isoler la ou les lignes fautives.
-      for (const { row, remote } of toSend) {
-        const single = await tryUpsert(tableName, [remote]);
-        if (single.ok) sent(tableName, [row]);
-        else if (isRejection(single.error)) reject(row, single.error);
-        else stop(single.error);
-        markProcessed(row);
+        const grouped = await trySend(tableName, op, items);
+        if (grouped.ok) {
+          sent(
+            tableName,
+            items.map((item) => item.row),
+          );
+          items.forEach((item) => markProcessed(item.row));
+          continue;
+        }
+        if (!isRejection(grouped.error)) stop(grouped.error);
+        if (items.length === 1) {
+          reject(items[0].row, grouped.error);
+          markProcessed(items[0].row);
+          continue;
+        }
+
+        // Refus d'un envoi groupé : renvoi ligne par ligne pour isoler la ou les lignes fautives.
+        for (const item of items) {
+          const single = await trySend(tableName, op, [item]);
+          if (single.ok) sent(tableName, [item.row]);
+          else if (isRejection(single.error)) reject(item.row, single.error);
+          else stop(single.error);
+          markProcessed(item.row);
+        }
       }
     }
   }

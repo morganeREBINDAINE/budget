@@ -1,7 +1,7 @@
 import { asc, eq } from 'drizzle-orm';
 
 import type { Database } from '@/db/client';
-import { categories, recurringOccurrences, syncQueue } from '@/db/schema';
+import { categories, debtPeople, recurringOccurrences, syncQueue } from '@/db/schema';
 import { subscribeLocalWrites } from '@/repositories/localWrites';
 import {
   insertRow,
@@ -159,28 +159,41 @@ describe('softDeleteRow', () => {
   });
 });
 
-describe('restore', () => {
-  it('annule la suppression logique, avance updated_at et ajoute la ligne à la file', () => {
-    const created = insertRow(db, 'categories', USER, category);
-    jest.setSystemTime(new Date('2026-10-20T12:00:00.000Z'));
-    softDeleteRow(db, 'categories', USER, created.id);
-    jest.setSystemTime(new Date('2026-10-20T13:00:00.000Z'));
+describe('hardDelete', () => {
+  it('efface la ligne et ajoute une entrée `delete` réduite à { id, userId }', () => {
+    const person = insertRow(db, 'debt_people', USER, { name: 'Karim' });
 
-    const restored = writeTransaction(db, USER, (w) => w.restore('categories', created.id));
+    writeTransaction(db, USER, (w) => w.hardDelete('debt_people', person.id));
 
-    expect(restored).toEqual({ ...created, updatedAt: '2026-10-20T13:00:00.000Z' });
-    expect(queue()[2].payload).toEqual(restored);
+    expect(db.select().from(debtPeople).all()).toEqual([]);
+    expect(queue()[1]).toMatchObject({
+      tableName: 'debt_people',
+      rowId: person.id,
+      op: 'delete',
+      payload: { id: person.id, userId: USER },
+    });
   });
 
-  it('refuse une ligne non supprimée ou d’un autre compte', () => {
-    const created = insertRow(db, 'categories', USER, category);
-    expect(() => writeTransaction(db, USER, (w) => w.restore('categories', created.id))).toThrow(
+  it('refuse une ligne absente ou d’un autre compte, sans rien écrire', () => {
+    const person = insertRow(db, 'debt_people', USER, { name: 'Karim' });
+    expect(() =>
+      writeTransaction(db, OTHER_USER, (w) => w.hardDelete('debt_people', person.id)),
+    ).toThrow(RowNotFoundError);
+    expect(() => writeTransaction(db, USER, (w) => w.hardDelete('debt_people', 'absent'))).toThrow(
       RowNotFoundError,
     );
-    softDeleteRow(db, 'categories', USER, created.id);
-    expect(() =>
-      writeTransaction(db, OTHER_USER, (w) => w.restore('categories', created.id)),
-    ).toThrow(RowNotFoundError);
+    expect(db.select().from(debtPeople).all()).toHaveLength(1);
+    expect(queue()).toHaveLength(1);
+  });
+});
+
+describe('insert avec createdAt', () => {
+  it('garde la date de création fournie, updated_at reste l’heure de l’écriture', () => {
+    const created = writeTransaction(db, USER, (w) =>
+      w.insert('categories', category, { createdAt: '2025-01-01T08:00:00.000Z' }),
+    );
+    expect(created.createdAt).toBe('2025-01-01T08:00:00.000Z');
+    expect(created.updatedAt).toBe('2026-10-20T10:00:00.000Z');
   });
 });
 

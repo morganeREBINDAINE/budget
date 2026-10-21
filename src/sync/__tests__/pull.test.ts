@@ -20,7 +20,6 @@ const person = (id: string, updatedAt: string, userId = USER): RemoteRow => ({
   name: `Personne ${id}`,
   created_at: updatedAt,
   updated_at: updatedAt,
-  deleted_at: null,
 });
 
 const category = (id: string, updatedAt: string): RemoteRow => ({
@@ -157,10 +156,10 @@ describe('pullAll', () => {
   });
 
   it('refuse une ligne invalide sans l’enregistrer', async () => {
-    const { deleted_at: _deleted, ...incomplete } = person('p-1', ts(1));
+    const { name: _name, ...incomplete } = person('p-1', ts(1));
     await expect(
       pullAll(db, USER, fakeServer({ debt_people: [incomplete] }).fetchPage),
-    ).rejects.toThrow('Colonne manquante : debt_people.deleted_at');
+    ).rejects.toThrow('Colonne manquante : debt_people.name');
     expect(db.select().from(debtPeople).all()).toHaveLength(0);
     expect(getSetting(db, USER, 'last_pulled_at')).toBeNull();
   });

@@ -3,13 +3,14 @@ import { asc, eq } from 'drizzle-orm';
 import type { Database } from '@/db/client';
 import { syncQueue, type SyncedTableName } from '@/db/schema';
 import { requeueRejectedEntries } from '@/repositories/syncQueue';
-import { insertRow, updateRow } from '@/repositories/write';
+import { insertRow, updateRow, writeTransaction } from '@/repositories/write';
 import type { RemoteRow } from '@/sync/columns';
 import {
   classifyErrorCode,
   PUSH_BATCH_SIZE,
   PushError,
   pushAll,
+  type DeleteRows,
   type UpsertRows,
 } from '@/sync/push';
 import { createTestDatabase } from '@/test/testDatabase';
@@ -64,9 +65,7 @@ describe('pushAll', () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0].tableName).toBe('debt_people');
-    expect(calls[0].rows).toEqual([
-      expect.objectContaining({ id, user_id: USER, name: 'Karim', deleted_at: null }),
-    ]);
+    expect(calls[0].rows).toEqual([expect.objectContaining({ id, user_id: USER, name: 'Karim' })]);
     expect(queue()).toHaveLength(0);
   });
 
@@ -333,5 +332,78 @@ describe('refus définitifs', () => {
     await expect(pushAll(db, USER, upsert)).resolves.toEqual({ sent: 1, rejected: 0 });
     expect(calls).toHaveLength(1);
     expect(queue()).toHaveLength(0);
+  });
+});
+
+describe('pushAll — suppressions définitives', () => {
+  const hardDelete = (id: string) =>
+    writeTransaction(db, USER, (w) => w.hardDelete('debt_people', id));
+
+  /** Faux Supabase : enregistre upserts et suppressions dans l'ordre d'envoi. */
+  function fakeServer(options: { deleteError?: PushError } = {}) {
+    const calls: { op: 'upsert' | 'delete'; tableName: SyncedTableName; ids: string[] }[] = [];
+    const upsert: UpsertRows = async (tableName, rows) => {
+      calls.push({ op: 'upsert', tableName, ids: rows.map((r) => r.id as string) });
+    };
+    const remove: DeleteRows = async (tableName, ids) => {
+      if (options.deleteError) throw options.deleteError;
+      calls.push({ op: 'delete', tableName, ids });
+    };
+    return { upsert, remove, calls };
+  }
+
+  it('envoie les suppressions avant les versions de la même table, puis vide la file', async () => {
+    const old = addPerson('Karim');
+    await pushAll(db, USER, fakeUpsert().upsert);
+    hardDelete(old);
+    const recreated = addPerson('Karim');
+    const { upsert, remove, calls } = fakeServer();
+
+    await expect(pushAll(db, USER, upsert, undefined, remove)).resolves.toEqual({
+      sent: 2,
+      rejected: 0,
+    });
+    expect(calls).toEqual([
+      { op: 'delete', tableName: 'debt_people', ids: [old] },
+      { op: 'upsert', tableName: 'debt_people', ids: [recreated] },
+    ]);
+    expect(queue()).toHaveLength(0);
+  });
+
+  it('ligne créée puis supprimée avant l’envoi : seule la suppression part', async () => {
+    const id = addPerson('Karim');
+    hardDelete(id);
+    const { upsert, remove, calls } = fakeServer();
+
+    await expect(pushAll(db, USER, upsert, undefined, remove)).resolves.toEqual({
+      sent: 2,
+      rejected: 0,
+    });
+    expect(calls).toEqual([{ op: 'delete', tableName: 'debt_people', ids: [id] }]);
+  });
+
+  it('erreur passagère : suppression gardée dans la file et marquée', async () => {
+    const id = addPerson('Karim');
+    await pushAll(db, USER, fakeUpsert().upsert);
+    hardDelete(id);
+    const { upsert, remove } = fakeServer({ deleteError: new PushError('réseau', 'transient') });
+
+    await expect(pushAll(db, USER, upsert, undefined, remove)).rejects.toThrow('réseau');
+    expect(queue()).toEqual([expect.objectContaining({ op: 'delete', attempts: 1 })]);
+  });
+
+  it('refus : suppression mise de côté sans bloquer la file', async () => {
+    const id = addPerson('Karim');
+    await pushAll(db, USER, fakeUpsert().upsert);
+    hardDelete(id);
+    const { upsert, remove } = fakeServer({ deleteError: new PushError('RLS', 'rejected') });
+
+    await expect(pushAll(db, USER, upsert, undefined, remove)).resolves.toEqual({
+      sent: 0,
+      rejected: 1,
+    });
+    expect(queue()).toEqual([
+      expect.objectContaining({ op: 'delete', rejectedAt: expect.any(String) }),
+    ]);
   });
 });

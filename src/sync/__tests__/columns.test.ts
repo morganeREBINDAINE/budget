@@ -49,7 +49,7 @@ const samples: { [T in SyncedTableName]: SyncedRow<T> } = {
     paidAt: '2026-10-06',
     transactionId: 'tx-1',
   },
-  debt_people: { ...base, name: 'Karim', deletedAt: null },
+  debt_people: { ...base, name: 'Karim' },
   debts: {
     ...base,
     direction: 'owed_to_me',

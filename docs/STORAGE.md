@@ -13,15 +13,16 @@ Modèle hors ligne d'abord, aligné sur `docs/PLAN.md` (phases 5 et 6).
 
 - Toute écriture (création, modification, suppression) = écriture de la ligne **et** ajout dans `sync_queue`, dans **une même transaction SQLite**. Si la transaction échoue, rien n'est écrit et l'erreur est affichée.
 - Chaque écriture renseigne `user_id`, `updated_at` (horodatage client) et, pour une création, un `id` UUID généré sur le client.
-- Suppressions logiques uniquement (`deleted_at`) ; les lectures filtrent `deleted_at IS NULL`.
+- Suppressions logiques par défaut (`deleted_at`) ; les lectures filtrent `deleted_at IS NULL`.
+- **Suppression définitive (exception)** : autorisée uniquement pour des données peu importantes, sans historique utile et recréables à la saisie (ex. une liste de noms proposés en autocomplétion). Ces tables sont déclarées explicitement comme telles et n'ont pas de colonne `deleted_at`. Leur suppression passe par l'outil d'écriture commun : la ligne est effacée et une entrée de suppression (réduite à l'id et au `user_id`) est ajoutée à la file de synchronisation, dans la même transaction. Côté serveur, une politique RLS `DELETE` limitée au propriétaire de la ligne est ajoutée. Toute nouvelle table concernée doit être validée avant implémentation.
 - L'interface se met à jour à partir de SQLite (requêtes réactives), une fois la transaction locale validée — pas d'état optimiste en mémoire.
 - Les opérations composées (ex. « J'ai payé » = dépense + occurrence ; import JSON) sont atomiques.
 
 ## 3. Synchronisation
 
 - Centralisée dans `src/sync/` ; aucun écran n'appelle Supabase directement.
-- **Push** : la file est vidée dans l'ordre, par lots, en `upsert` par `id` (relançable sans doublon) ; une entrée n'est retirée qu'après confirmation de Supabase.
-- **Pull** : récupération des lignes `updated_at > last_pulled_at` (restauration, réinstallation).
+- **Push** : la file est vidée dans l'ordre, par lots, en `upsert` par `id` (relançable sans doublon) ; les suppressions définitives sont envoyées avant les écritures de la même table (elles libèrent les valeurs uniques) et supprimer une ligne déjà absente n'est pas une erreur ; une entrée n'est retirée qu'après confirmation de Supabase.
+- **Pull** : récupération des lignes `updated_at > last_pulled_at` (restauration, réinstallation) ; une ligne dont la suppression définitive attend dans la file n'est pas réinsérée.
 - **Conflits** : la modification la plus récente gagne (`updated_at`). Côté SQLite, le pull ne remplace une ligne que si la version distante est plus récente et qu'aucune modification locale n'attend dans `sync_queue` ; côté Supabase, le trigger `skip_stale_update` ignore une mise à jour qui n'est pas plus récente que la ligne en base.
 - **Déclencheurs** : démarrage de l'app, retour du réseau, retour au premier plan, après chaque écriture si en ligne, tâche de fond (`expo-background-task`), bouton « Synchroniser ». Les déclencheurs automatiques sont silencieux hors ligne (aucune requête, aucune erreur affichée) et ne contournent pas une relance déjà programmée, sauf le démarrage et le retour du réseau.
 - Un verrou empêche deux synchronisations simultanées ; échecs relancés avec délais croissants, `last_error` conservée. Toute requête Supabase est annulée après 30 s sans réponse (`src/lib/fetchWithTimeout.ts` : React Native n'impose aucun délai sur Android) : sans cela, une requête partie sur une connexion morte bloquerait le verrou indéfiniment. Elle devient une erreur passagère, relancée, avec le message « Le serveur ne répond pas. ». Les relances se font **côté client** (les données n'existent que sur le téléphone), app ouverte, jamais hors ligne ni avec une session refusée.

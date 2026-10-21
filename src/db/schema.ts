@@ -151,8 +151,8 @@ export const debtPeople = sqliteTable(
     id: text('id').primaryKey(),
     userId: text('user_id').notNull(),
     name: text('name').notNull(),
+    // Pas de suppression logique : suppression définitive (HARD_DELETABLE_TABLES).
     ...timestamps,
-    ...softDelete,
   },
   (t) => [
     // Unique par utilisateur, insensible à la casse (les accents sont comparés côté app).
@@ -216,6 +216,13 @@ export const SYNCED_TABLES = [
 
 export type SyncedTableName = (typeof SYNCED_TABLES)[number];
 
+// Tables à suppression définitive (docs/STORAGE.md §2, exception) : données peu importantes, sans
+// historique utile et recréables à la saisie (noms proposés en autocomplétion). Pas de deleted_at ;
+// la ligne est supprimée et une entrée `delete` part dans sync_queue.
+export const HARD_DELETABLE_TABLES = ['debt_people'] as const satisfies readonly SyncedTableName[];
+
+export type HardDeletableTableName = (typeof HARD_DELETABLE_TABLES)[number];
+
 // Table Drizzle de chaque table synchronisée (outil d'écriture, synchro).
 export const syncedTables = {
   categories,
@@ -235,7 +242,8 @@ export const syncQueue = sqliteTable(
     userId: text('user_id').notNull(),
     tableName: text('table_name', { enum: SYNCED_TABLES }).notNull(),
     rowId: text('row_id').notNull(),
-    op: text('op', { enum: ['upsert'] }).notNull(),
+    // `delete` : suppression définitive (HARD_DELETABLE_TABLES), payload réduit à { id, userId }.
+    op: text('op', { enum: ['upsert', 'delete'] }).notNull(),
     payload: text('payload', { mode: 'json' }).notNull().$type<Record<string, unknown>>(),
     attempts: integer('attempts').notNull().default(0),
     lastError: text('last_error'),

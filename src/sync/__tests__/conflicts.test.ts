@@ -2,10 +2,10 @@ import { eq } from 'drizzle-orm';
 
 import type { Database } from '@/db/client';
 import { debtPeople, type SyncedTableName } from '@/db/schema';
-import { insertRow, updateRow } from '@/repositories/write';
+import { insertRow, updateRow, writeTransaction } from '@/repositories/write';
 import type { RemoteRow } from '@/sync/columns';
 import { pullAll, type FetchPage } from '@/sync/pull';
-import { pushAll, type UpsertRows } from '@/sync/push';
+import { pushAll, type DeleteRows, type UpsertRows } from '@/sync/push';
 import type { SyncDeps } from '@/sync/syncNow';
 import { createTestDatabase } from '@/test/testDatabase';
 
@@ -47,6 +47,10 @@ function fakeSupabase() {
     }
   };
 
+  const remove: DeleteRows = async (tableName, ids) => {
+    for (const id of ids) table(tableName).delete(id);
+  };
+
   const fetchPage: FetchPage = async ({ tableName, userId, since, after, limit }) =>
     [...table(tableName).values()]
       .filter((row) => row.user_id === userId)
@@ -68,7 +72,7 @@ function fakeSupabase() {
 
   const remoteName = (id: string) => table('debt_people').get(id)?.name;
 
-  return { upsert, fetchPage, editRemote, remoteName };
+  return { upsert, remove, fetchPage, editRemote, remoteName };
 }
 
 let store: typeof import('@/sync/syncNow');
@@ -85,7 +89,8 @@ beforeEach(() => {
   server = fakeSupabase();
   deps = {
     isOnline: async () => true,
-    push: (database, userId, onProgress) => pushAll(database, userId, server.upsert, onProgress),
+    push: (database, userId, onProgress) =>
+      pushAll(database, userId, server.upsert, onProgress, server.remove),
     pull: (database, userId) => pullAll(database, userId, server.fetchPage),
     requestTimeouts: () => 0,
   };
@@ -170,14 +175,43 @@ describe('conflits', () => {
     expect(localName(id)).toBe('Pendant le pull');
   });
 
-  it('suppression distante plus récente : appliquée en local', async () => {
+  it('suppression définitive locale : effacée côté serveur, jamais réinsérée par le pull', async () => {
     const id = await createSynced('Initial', 1);
-    server.editRemote(id, { deleted_at: iso(2) }, 2);
+    jest.setSystemTime(at(2));
+    writeTransaction(db, USER, (w) => w.hardDelete('debt_people', id));
+
+    // Pull seul avant l'envoi : la ligne distante n'est pas réinsérée.
+    await pullAll(db, USER, server.fetchPage);
+    expect(localName(id)).toBeUndefined();
 
     jest.setSystemTime(at(3));
     await sync();
+    expect(server.remoteName(id)).toBeUndefined();
+    expect(localName(id)).toBeUndefined();
+  });
 
-    expect(db.select().from(debtPeople).where(eq(debtPeople.id, id)).get()?.deletedAt).toBe(iso(2));
+  it('personne supprimée puis recréée avec le même nom : l’ancienne part avant la nouvelle', async () => {
+    const old = await createSynced('Karim', 1);
+    jest.setSystemTime(at(2));
+    const recreated = writeTransaction(db, USER, (w) => {
+      w.hardDelete('debt_people', old);
+      return w.insert('debt_people', { name: 'Karim' }).id;
+    });
+    const order: string[] = [];
+    const upsert: UpsertRows = async (tableName, rows) => {
+      order.push('upsert');
+      await server.upsert(tableName, rows);
+    };
+    const remove: DeleteRows = async (tableName, ids) => {
+      order.push('delete');
+      await server.remove(tableName, ids);
+    };
+
+    await pushAll(db, USER, upsert, undefined, remove);
+
+    expect(order).toEqual(['delete', 'upsert']);
+    expect(server.remoteName(old)).toBeUndefined();
+    expect(server.remoteName(recreated)).toBe('Karim');
   });
 
   // Risque connu (docs/PLAN.md, Risques) : un pull lancé seul (pull initial à la reconnexion) avec

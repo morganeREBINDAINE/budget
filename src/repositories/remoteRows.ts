@@ -1,4 +1,4 @@
-import { and, count, eq, getTableColumns, isNull, sql, type SQL } from 'drizzle-orm';
+import { and, count, eq, getTableColumns, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 
 import type { Database } from '@/db/client';
 import { categories, syncedTables, syncQueue, type SyncedTableName } from '@/db/schema';
@@ -20,7 +20,8 @@ type LooseTable = (typeof syncedTables)['categories'];
  * Enregistre des lignes du compte `userId` venues de Supabase, dans une transaction SQLite.
  * Une ligne absente est insérée ; une ligne existante n'est remplacée que si la version distante
  * est plus récente (`updated_at`) **et** qu'aucune modification locale de cette ligne n'attend
- * dans `sync_queue` (elle sera envoyée par le push).
+ * dans `sync_queue` (elle sera envoyée par le push). Une ligne effacée en local dont la suppression
+ * définitive attend dans `sync_queue` n'est pas réinsérée.
  */
 export function saveRemoteRows<T extends SyncedTableName>(
   db: Database,
@@ -49,8 +50,30 @@ export function saveRemoteRows<T extends SyncedTableName>(
 
   db.transaction((tx) => {
     for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+      // Ligne effacée en local dont la suppression définitive attend dans la file : pas réinsérée.
+      const chunk = rows.slice(i, i + CHUNK_SIZE);
+      const pending = new Set(
+        tx
+          .select({ rowId: syncQueue.rowId })
+          .from(syncQueue)
+          .where(
+            and(
+              eq(syncQueue.userId, userId),
+              eq(syncQueue.tableName, tableName),
+              eq(syncQueue.op, 'delete'),
+              inArray(
+                syncQueue.rowId,
+                chunk.map((row) => row.id),
+              ),
+            ),
+          )
+          .all()
+          .map((entry) => entry.rowId),
+      );
+      const toSave = chunk.filter((row) => !pending.has(row.id));
+      if (toSave.length === 0) continue;
       tx.insert(table)
-        .values(rows.slice(i, i + CHUNK_SIZE) as never)
+        .values(toSave as never)
         .onConflictDoUpdate({ target: table.id, set, setWhere })
         .run();
     }
