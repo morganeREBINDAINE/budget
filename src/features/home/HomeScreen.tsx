@@ -92,13 +92,13 @@ export function HomeScreen() {
       )}
       <FabGroup onAddIncome={addIncome} onAddExpense={addExpense} />
       <PayDueDialog
-        key={paying ? `${paying.payment.id}-${paying.dueDate}` : 'closed'}
+        key={paying ? `pay-${paying.payment.id}-${paying.dueDate}` : 'pay-closed'}
         due={paying}
         onCancel={closePay}
         onPaid={closePay}
       />
       <DeleteTransactionDialog
-        key={deleting?.id ?? 'closed'}
+        key={`delete-${deleting?.id ?? 'closed'}`}
         transaction={deleting}
         onCancel={closeDelete}
         onDeleted={closeDelete}
