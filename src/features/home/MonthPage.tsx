@@ -3,7 +3,7 @@ import { FlatList, type ListRenderItem } from 'react-native';
 
 import { FAB_AREA_HEIGHT, Row, screenPadding, Stack, Text, useTheme } from '@/design-system';
 import type { LiveData } from '@/db/liveData';
-import { DuePaymentBanner } from '@/features/recurring/components/DuePaymentBanner';
+import { DuePaymentsCarousel } from '@/features/recurring/components/DuePaymentsCarousel';
 import type { MonthSummary } from '@/lib/budget';
 import { formatMonth, type YearMonth } from '@/lib/format';
 import type { Category, DuePayment, Transaction } from '@/types/budget';
@@ -68,14 +68,7 @@ function MonthContent({
       {summary.orphanExpenses.length > 0 && (
         <OrphanExpensesNotice expenses={summary.orphanExpenses} />
       )}
-      {duePayments.length > 0 && (
-        <Stack gap="md">
-          {/* Quelques encarts au plus : rendus dans l'en-tête de la liste virtualisée. */}
-          {duePayments.map((due) => (
-            <DuePaymentBanner key={`${due.payment.id}-${due.dueDate}`} due={due} onPay={onPayDue} />
-          ))}
-        </Stack>
-      )}
+      {duePayments.length > 0 && <DuePaymentsCarousel dues={duePayments} onPay={onPayDue} />}
       <MonthBalanceCard amounts={summary} />
       <Row gap="sm" align="baseline">
         <Text variant="title">Détail</Text>

@@ -5,28 +5,42 @@ import { FlatList, type ListRenderItem } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, Fab, FAB_AREA_HEIGHT, screenPadding, Stack, Text, useTheme } from '@/design-system';
+import { CategoriesReadError } from '@/features/categories/components/CategoriesReadError';
+import { useCategories } from '@/features/categories/useCategories';
+import { ReadErrorCard } from '@/features/db/ReadErrorCard';
 import { AppHeader } from '@/features/navigation/AppHeader';
 import { InitialPullError } from '@/features/sync/components/InitialPullError';
 import { LoadingRegion, RowSkeletonList } from '@/features/sync/components/Skeletons';
 import { useInitialPull } from '@/features/sync/useInitialPull';
-import { mockCategories } from '@/mocks/budget';
-import { mockNextDueDates, mockRecurringPayments } from '@/mocks/recurring';
+import { toIsoDate } from '@/lib/format';
+import { nextDueDate } from '@/lib/recurring';
 import type { RecurringPayment } from '@/types/budget';
 
 import { RecurringRow } from './components/RecurringRow';
+import { usePaidDueDates, useRecurringPayments } from './useRecurring';
+
+type Item = { payment: RecurringPayment; nextDueDate: string | null };
 
 const openPayment = (id: string) => router.push({ pathname: '/recurring/[id]', params: { id } });
 
 const NO_DUE_DATE = '9999-12-31';
 
 // Actifs d'abord, triés par prochaine échéance ; inactifs ensuite, par nom.
-function sortPayments(payments: RecurringPayment[]): RecurringPayment[] {
-  const due = (p: RecurringPayment) => mockNextDueDates[p.id] ?? NO_DUE_DATE;
-  return [...payments].sort(
+function toSortedItems(
+  payments: RecurringPayment[],
+  paid: ReadonlyMap<string, readonly string[]>,
+  today: string,
+): Item[] {
+  const items = payments.map((payment) => ({
+    payment,
+    nextDueDate: nextDueDate(payment, paid.get(payment.id) ?? [], today),
+  }));
+  const due = (i: Item) => i.nextDueDate ?? NO_DUE_DATE;
+  return items.sort(
     (a, b) =>
-      Number(b.active) - Number(a.active) ||
-      (a.active ? due(a).localeCompare(due(b)) : 0) ||
-      a.name.localeCompare(b.name, 'fr'),
+      Number(b.payment.active) - Number(a.payment.active) ||
+      (a.payment.active ? due(a).localeCompare(due(b)) : 0) ||
+      a.payment.name.localeCompare(b.payment.name, 'fr'),
   );
 }
 
@@ -34,11 +48,30 @@ function sortPayments(payments: RecurringPayment[]): RecurringPayment[] {
 export function RecurringListScreen() {
   const { colors, spacing } = useTheme();
   const insets = useSafeAreaInsets();
-  // TODO(phase 3) : requête SQLite réactive + calcul des échéances (lib/recurring.ts).
-  const payments = useMemo(() => sortPayments(mockRecurringPayments), []);
-  const categoriesById = useMemo(() => new Map(mockCategories.map((c) => [c.id, c])), []);
-  // Pendant le pull initial : skeletons, et actions bloquées par un garde dans chaque handler.
-  const { ready, failed } = useInitialPull();
+  const payments = useRecurringPayments();
+  const paid = usePaidDueDates();
+  const categories = useCategories();
+  const today = toIsoDate(new Date());
+  const items = useMemo(
+    () =>
+      payments.status === 'ready' && paid.status === 'ready'
+        ? toSortedItems(payments.data, paid.data, today)
+        : [],
+    [payments, paid, today],
+  );
+  const categoriesById = useMemo(
+    () => new Map(categories.status === 'ready' ? categories.data.map((c) => [c.id, c]) : []),
+    [categories],
+  );
+  // Pendant le pull initial ou la lecture : skeletons, et actions bloquées par un garde.
+  const { ready: pulled, failed } = useInitialPull();
+  const readError =
+    payments.status === 'error' || paid.status === 'error' || categories.status === 'error';
+  const ready =
+    pulled &&
+    payments.status === 'ready' &&
+    paid.status === 'ready' &&
+    categories.status === 'ready';
   const addPayment = () => {
     if (!ready) return;
     router.push('/recurring/new');
@@ -48,12 +81,12 @@ export function RecurringListScreen() {
     if (!ready) return;
   };
 
-  const renderItem: ListRenderItem<RecurringPayment> = useCallback(
+  const renderItem: ListRenderItem<Item> = useCallback(
     ({ item }) => (
       <RecurringRow
-        payment={item}
-        category={categoriesById.get(item.categoryId)}
-        nextDueDate={mockNextDueDates[item.id] ?? null}
+        payment={item.payment}
+        category={categoriesById.get(item.payment.categoryId)}
+        nextDueDate={item.nextDueDate}
         onPress={openPayment}
       />
     ),
@@ -66,13 +99,13 @@ export function RecurringListScreen() {
         <AppHeader onExport={exportData} />
       </Stack>
       <FlatList
-        data={ready ? payments : []}
-        keyExtractor={(p) => p.id}
+        data={ready ? items : []}
+        keyExtractor={(i) => i.payment.id}
         renderItem={renderItem}
         ListHeaderComponent={
           <Stack gap="xs" style={{ marginBottom: spacing.sm }}>
             <Text variant="title">Paiements réguliers</Text>
-            {ready && payments.length > 0 ? (
+            {ready && items.length > 0 ? (
               <Text variant="bodySmall" color="textSecondary">
                 À l&apos;échéance, un encart rouge s&apos;affiche sur l&apos;accueil jusqu&apos;à ce
                 que tu confirmes le paiement.
@@ -83,6 +116,15 @@ export function RecurringListScreen() {
         ListEmptyComponent={
           failed ? (
             <InitialPullError />
+          ) : readError ? (
+            categories.status === 'error' ? (
+              <CategoriesReadError />
+            ) : (
+              <ReadErrorCard
+                title="Paiements indisponibles"
+                message="Impossible de lire les paiements réguliers enregistrés sur le téléphone. Ferme puis rouvre l'application."
+              />
+            )
           ) : !ready ? (
             <LoadingRegion>
               <RowSkeletonList />

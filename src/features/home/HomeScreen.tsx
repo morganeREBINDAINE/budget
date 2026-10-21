@@ -6,10 +6,10 @@ import { screenPadding, Stack, useTheme } from '@/design-system';
 import { useCategories } from '@/features/categories/useCategories';
 import { AppHeader } from '@/features/navigation/AppHeader';
 import { PayDueDialog } from '@/features/recurring/components/PayDueDialog';
+import { useDuePayments } from '@/features/recurring/useRecurring';
 import { useInitialPull } from '@/features/sync/useInitialPull';
 import { DeleteTransactionDialog } from '@/features/transaction/components/DeleteTransactionDialog';
 import { currentYearMonth, shiftMonth, type YearMonth } from '@/lib/format';
-import { mockDuePayments } from '@/mocks/recurring';
 import type { DuePayment, Transaction } from '@/types/budget';
 
 import { FabGroup } from './components/FabGroup';
@@ -18,11 +18,15 @@ import { MonthPager } from './components/MonthPager';
 import { MonthSelector } from './components/MonthSelector';
 import { MonthPage } from './MonthPage';
 
+const NO_DUES: DuePayment[] = [];
+
 export function HomeScreen() {
   const { colors } = useTheme();
   const [month, setMonth] = useState(currentYearMonth);
-  // TODO(phase 3) : échéances dues calculées par lib/recurring.ts.
-  const [duePayments, setDuePayments] = useState<DuePayment[]>(mockDuePayments);
+  // Échéances dues de tous les paiements (affichées sur tous les mois) ; en lecture ou en échec
+  // de lecture (toast déjà affiché), aucun encart.
+  const dues = useDuePayments();
+  const duePayments = dues.status === 'ready' ? dues.data : NO_DUES;
   const [paying, setPaying] = useState<DuePayment | null>(null);
   const [deleting, setDeleting] = useState<Transaction | null>(null);
   const categories = useCategories();
@@ -47,12 +51,14 @@ export function HomeScreen() {
     if (!ready) return;
   }, [ready]);
 
-  const markPaid = useCallback((paid: DuePayment) => {
-    setDuePayments((list) =>
-      list.filter((d) => !(d.payment.id === paid.payment.id && d.dueDate === paid.dueDate)),
-    );
-    setPaying(null);
-  }, []);
+  const payDue = useCallback(
+    (due: DuePayment) => {
+      if (!ready) return;
+      setPaying(due);
+    },
+    [ready],
+  );
+  const closePay = useCallback(() => setPaying(null), []);
 
   const renderPage = useCallback(
     (m: YearMonth) => (
@@ -60,12 +66,12 @@ export function HomeScreen() {
         month={m}
         categories={categories}
         duePayments={duePayments}
-        onPayDue={setPaying}
+        onPayDue={payDue}
         onOpenTransaction={openTransaction}
         onDeleteTransaction={setDeleting}
       />
     ),
-    [categories, duePayments, openTransaction],
+    [categories, duePayments, payDue, openTransaction],
   );
 
   return (
@@ -88,8 +94,8 @@ export function HomeScreen() {
       <PayDueDialog
         key={paying ? `${paying.payment.id}-${paying.dueDate}` : 'closed'}
         due={paying}
-        onCancel={() => setPaying(null)}
-        onPaid={markPaid}
+        onCancel={closePay}
+        onPaid={closePay}
       />
       <DeleteTransactionDialog
         key={deleting?.id ?? 'closed'}

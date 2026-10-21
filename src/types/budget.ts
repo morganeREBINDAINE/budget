@@ -41,6 +41,8 @@ export type RecurringPayment = {
   startDate: string;
   active: boolean;
   note: string | null;
+  // ISO : aucune échéance avant la création (pas d'arriéré).
+  createdAt: string;
 };
 
 // Échéance arrivée et non payée (encart rouge de l'accueil).

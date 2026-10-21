@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { type ReactNode, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -11,29 +11,47 @@ import {
   screenPadding,
   ScreenHeader,
   SegmentedControl,
+  Skeleton,
   Stack,
   Switch,
   Text,
   useTheme,
 } from '@/design-system';
+import { useDatabase } from '@/db/DatabaseProvider';
+import { useUserId } from '@/features/auth/AuthProvider';
+import { CategoriesReadError } from '@/features/categories/components/CategoriesReadError';
+import { useCategories } from '@/features/categories/useCategories';
+import { ReadErrorCard } from '@/features/db/ReadErrorCard';
+import { InitialPullError } from '@/features/sync/components/InitialPullError';
+import { LoadingRegion } from '@/features/sync/components/Skeletons';
+import { useInitialPull } from '@/features/sync/useInitialPull';
 import { AmountInput } from '@/features/transaction/components/AmountInput';
 import { CategoryGrid } from '@/features/transaction/components/CategoryGrid';
 import { DateField } from '@/features/transaction/components/DateField';
 import { toIsoDate } from '@/lib/format';
-import { parseDecimal } from '@/lib/money';
-import { fakeRequest } from '@/mocks/account';
-import { mockCategories } from '@/mocks/budget';
-import type { RecurringFrequency, RecurringPayment } from '@/types/budget';
+import {
+  isRecurringUnchanged,
+  RECURRING_NAME_MAX_LENGTH,
+  RECURRING_NOTE_MAX_LENGTH,
+  type RecurringErrors,
+  validateRecurring,
+} from '@/lib/recurring';
+import {
+  createRecurringPayment,
+  deleteRecurringPayment,
+  updateRecurringPayment,
+} from '@/repositories/recurring';
+import { RowNotFoundError } from '@/repositories/write';
+import type { Category, RecurringFrequency, RecurringPayment } from '@/types/budget';
 
 import { DayOfMonthPicker } from './components/DayOfMonthPicker';
 import { MonthPicker } from './components/MonthPicker';
 import { FREQUENCY_LABEL } from './recurrence';
+import { useRecurringPayment } from './useRecurring';
 
-type Props = { mode: 'new' } | { mode: 'edit'; payment: RecurringPayment | undefined };
+type Props = { mode: 'new' } | { mode: 'edit'; id: string };
 
-type Errors = Partial<Record<'name' | 'amount' | 'category' | 'day' | 'month' | 'submit', string>>;
-
-export const RECURRING_NAME_MAX_LENGTH = 30;
+type Errors = RecurringErrors & { submit?: string };
 
 const FREQUENCIES = (['monthly', 'yearly'] as const).map((value) => ({
   value,
@@ -45,19 +63,84 @@ const goBack = () => router.back();
 // Éditeur d'un paiement régulier (création ou modification), écran plein.
 export function RecurringEditorScreen(props: Props) {
   const { colors } = useTheme();
-  const payment = props.mode === 'edit' ? props.payment : undefined;
   const title = props.mode === 'new' ? 'Nouveau paiement' : 'Modifier le paiement';
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack style={{ paddingHorizontal: screenPadding }}>
         <ScreenHeader title={title} onBack={goBack} />
       </Stack>
-      {props.mode === 'edit' && !payment ? (
-        <RecurringNotFound />
-      ) : (
-        <RecurringForm payment={payment} />
-      )}
+      {props.mode === 'edit' ? <EditContent id={props.id} /> : <NewContent />}
     </SafeAreaView>
+  );
+}
+
+// Pendant le pull initial ou la lecture : skeletons ; échec : bloc d'erreur (toast déjà affiché).
+function NewContent() {
+  const { ready, failed } = useInitialPull();
+  const categories = useCategories();
+  if (failed)
+    return (
+      <ErrorContainer>
+        <InitialPullError />
+      </ErrorContainer>
+    );
+  if (categories.status === 'error') {
+    return (
+      <ErrorContainer>
+        <CategoriesReadError />
+      </ErrorContainer>
+    );
+  }
+  if (!ready || categories.status === 'loading') return <RecurringFormSkeleton />;
+  return <RecurringForm payment={undefined} categories={categories.data} />;
+}
+
+function EditContent({ id }: { id: string }) {
+  const { ready, failed } = useInitialPull();
+  const categories = useCategories();
+  const payment = useRecurringPayment(id);
+  // Dernière version lue : après une suppression, le formulaire reste affiché pendant le retour
+  // au lieu de basculer sur « introuvable ».
+  const [lastRead, setLastRead] = useState<RecurringPayment | undefined>(undefined);
+  const current = payment.status === 'ready' ? payment.data : undefined;
+  if (current && current !== lastRead) setLastRead(current);
+  const shown = current ?? lastRead;
+
+  if (failed)
+    return (
+      <ErrorContainer>
+        <InitialPullError />
+      </ErrorContainer>
+    );
+  if (categories.status === 'error') {
+    return (
+      <ErrorContainer>
+        <CategoriesReadError />
+      </ErrorContainer>
+    );
+  }
+  if (payment.status === 'error') {
+    return (
+      <ErrorContainer>
+        <ReadErrorCard
+          title="Paiement indisponible"
+          message="Impossible de le lire sur le téléphone. Ferme puis rouvre l'application."
+        />
+      </ErrorContainer>
+    );
+  }
+  if (!ready || categories.status === 'loading' || (!shown && payment.status === 'loading')) {
+    return <RecurringFormSkeleton />;
+  }
+  if (!shown) return <RecurringNotFound />;
+  // Initialisé une seule fois (clé stable) : une synchro pendant la saisie ne l'écrase pas.
+  return <RecurringForm key={shown.id} payment={shown} categories={categories.data} />;
+}
+
+function ErrorContainer({ children }: { children: ReactNode }) {
+  const { spacing } = useTheme();
+  return (
+    <Stack style={{ paddingHorizontal: screenPadding, paddingTop: spacing.lg }}>{children}</Stack>
   );
 }
 
@@ -69,16 +152,26 @@ function dayHint(day: number | null, frequency: RecurringFrequency, month: numbe
   return undefined;
 }
 
-function RecurringForm({ payment }: { payment: RecurringPayment | undefined }) {
+function RecurringForm({
+  payment,
+  categories,
+}: {
+  payment: RecurringPayment | undefined;
+  categories: Category[];
+}) {
   const { spacing } = useTheme();
+  const db = useDatabase();
+  const userId = useUserId();
+  const writing = useRef(false);
   const now = new Date();
+  const today = toIsoDate(now);
   const [name, setName] = useState(payment?.name ?? '');
   const [amount, setAmount] = useState(payment ? String(payment.amountDa) : '');
   const [categoryId, setCategoryId] = useState<string | null>(payment?.categoryId ?? null);
   const [frequency, setFrequency] = useState<RecurringFrequency>(payment?.frequency ?? 'monthly');
   const [day, setDay] = useState<number | null>(payment?.dayOfMonth ?? now.getDate());
   const [month, setMonth] = useState<number | null>(payment?.month ?? now.getMonth() + 1);
-  const [startDate, setStartDate] = useState(payment?.startDate ?? toIsoDate(now));
+  const [startDate, setStartDate] = useState(payment?.startDate ?? today);
   const [active, setActive] = useState(payment?.active ?? true);
   const [note, setNote] = useState(payment?.note ?? '');
   const [errors, setErrors] = useState<Errors>({});
@@ -86,47 +179,59 @@ function RecurringForm({ payment }: { payment: RecurringPayment | undefined }) {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const trimmed = name.trim();
-  const amountValue = parseDecimal(amount);
 
   const clearError = (key: keyof Errors) =>
     setErrors((e) => (e[key] || e.submit ? { ...e, [key]: undefined, submit: undefined } : e));
 
-  const validate = (): Errors => {
-    const next: Errors = {};
-    if (trimmed === '') next.name = 'Saisis un nom.';
-    else if (trimmed.length > RECURRING_NAME_MAX_LENGTH)
-      next.name = `${RECURRING_NAME_MAX_LENGTH} caractères maximum.`;
-    if (amountValue === null || amountValue <= 0) next.amount = 'Saisis un montant supérieur à 0.';
-    else if (!Number.isInteger(amountValue))
-      next.amount = 'Le montant en dinars doit être un nombre entier.';
-    if (!categoryId) next.category = 'Choisis une catégorie.';
-    if (day === null || day < 1 || day > 31) next.day = 'Choisis un jour.';
-    if (frequency === 'yearly' && month === null) next.month = 'Choisis un mois.';
-    return next;
-  };
-
-  // Le bouton bloque déjà les appuis tant que la Promise est en cours.
-  // TODO(phase 3) : écriture SQLite (month = null si mensuel) + file de synchro.
-  const save = async () => {
-    const next = validate();
-    setErrors(next);
-    if (Object.keys(next).length > 0) return;
+  // Écriture SQLite synchrone (quasi instantanée) : pas de spinner, garde contre le double appui.
+  const save = () => {
+    if (writing.current) return;
+    const result = validateRecurring(
+      { name, amount, categoryId, frequency, dayOfMonth: day, month, startDate, active, note },
+      new Set(categories.map((c) => c.id)),
+    );
+    if (!result.ok) {
+      setErrors(result.errors);
+      return;
+    }
+    writing.current = true;
     try {
-      await fakeRequest(600);
+      if (!payment) createRecurringPayment(db, userId, result.values);
+      // Rien de modifié : aucune écriture (pas d'entrée inutile dans la file de synchro).
+      else if (!isRecurringUnchanged(payment, result.values)) {
+        updateRecurringPayment(db, userId, payment.id, result.values);
+      }
       goBack();
-    } catch {
-      setErrors({ submit: "L'enregistrement a échoué. Réessaie." });
+    } catch (error) {
+      writing.current = false;
+      console.error("[db] Échec de l'enregistrement du paiement régulier", error);
+      setErrors({
+        submit:
+          error instanceof RowNotFoundError
+            ? "Ce paiement n'existe plus."
+            : "L'enregistrement a échoué. Réessaie.",
+      });
     }
   };
 
-  // TODO(phase 3) : suppression logique (deleted_at) ; les dépenses déjà créées restent.
-  const remove = async () => {
+  // Suppression logique : les dépenses et occurrences déjà enregistrées restent.
+  const remove = () => {
+    if (!payment || writing.current) return;
+    writing.current = true;
     setDeleteError(null);
     try {
-      await fakeRequest(600);
+      deleteRecurringPayment(db, userId, payment.id);
       setConfirmDelete(false);
       goBack();
-    } catch {
+    } catch (error) {
+      // Déjà supprimé (ex. par une synchro) : le résultat attendu est atteint.
+      if (error instanceof RowNotFoundError) {
+        setConfirmDelete(false);
+        goBack();
+        return;
+      }
+      writing.current = false;
+      console.error('[db] Échec de la suppression du paiement régulier', error);
       setDeleteError('La suppression a échoué. Réessaie.');
     }
   };
@@ -167,7 +272,7 @@ function RecurringForm({ payment }: { payment: RecurringPayment | undefined }) {
         />
 
         <CategoryGrid
-          categories={mockCategories}
+          categories={categories}
           value={categoryId}
           onChange={(id) => {
             setCategoryId(id);
@@ -212,9 +317,10 @@ function RecurringForm({ payment }: { payment: RecurringPayment | undefined }) {
           value={startDate}
           onChange={(d) => {
             setStartDate(d);
-            clearError('submit');
+            clearError('startDate');
           }}
-          hint="Aucune échéance avant cette date."
+          hint="Aucune échéance avant cette date, ni avant la création du paiement."
+          error={errors.startDate}
         />
 
         <Card>
@@ -228,6 +334,11 @@ function RecurringForm({ payment }: { payment: RecurringPayment | undefined }) {
             value={active}
             onValueChange={(v) => {
               setActive(v);
+              // Réactivation : pas d'arriéré pour la période d'inactivité, la date de début
+              // repart d'aujourd'hui (modifiable avant d'enregistrer).
+              if (payment && !payment.active) {
+                setStartDate(v && payment.startDate < today ? today : payment.startDate);
+              }
               clearError('submit');
             }}
           />
@@ -238,6 +349,7 @@ function RecurringForm({ payment }: { payment: RecurringPayment | undefined }) {
           value={note}
           onChangeText={setNote}
           placeholder="Ex. Virement au propriétaire"
+          maxLength={RECURRING_NOTE_MAX_LENGTH}
           returnKeyType="done"
         />
 
@@ -287,6 +399,29 @@ function RecurringForm({ payment }: { payment: RecurringPayment | undefined }) {
         />
       )}
     </>
+  );
+}
+
+// Formulaire pendant la lecture : libellés fixes, champs remplacés.
+function RecurringFormSkeleton() {
+  const { spacing } = useTheme();
+  const field = (label: string, height: number) => (
+    <Stack gap="xs">
+      <Text variant="label" color="textSecondary">
+        {label}
+      </Text>
+      <Skeleton height={height} radius="md" />
+    </Stack>
+  );
+  return (
+    <Stack style={{ paddingHorizontal: screenPadding, paddingTop: spacing.lg }}>
+      <LoadingRegion gap="xl">
+        {field('Nom', 48)}
+        {field('Montant', 64)}
+        {field('Sélectionner une catégorie', 200)}
+        {field('Fréquence', 48)}
+      </LoadingRegion>
+    </Stack>
   );
 }
 
