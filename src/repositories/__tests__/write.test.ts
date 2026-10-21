@@ -159,6 +159,31 @@ describe('softDeleteRow', () => {
   });
 });
 
+describe('restore', () => {
+  it('annule la suppression logique, avance updated_at et ajoute la ligne à la file', () => {
+    const created = insertRow(db, 'categories', USER, category);
+    jest.setSystemTime(new Date('2026-10-20T12:00:00.000Z'));
+    softDeleteRow(db, 'categories', USER, created.id);
+    jest.setSystemTime(new Date('2026-10-20T13:00:00.000Z'));
+
+    const restored = writeTransaction(db, USER, (w) => w.restore('categories', created.id));
+
+    expect(restored).toEqual({ ...created, updatedAt: '2026-10-20T13:00:00.000Z' });
+    expect(queue()[2].payload).toEqual(restored);
+  });
+
+  it('refuse une ligne non supprimée ou d’un autre compte', () => {
+    const created = insertRow(db, 'categories', USER, category);
+    expect(() => writeTransaction(db, USER, (w) => w.restore('categories', created.id))).toThrow(
+      RowNotFoundError,
+    );
+    softDeleteRow(db, 'categories', USER, created.id);
+    expect(() =>
+      writeTransaction(db, OTHER_USER, (w) => w.restore('categories', created.id)),
+    ).toThrow(RowNotFoundError);
+  });
+});
+
 describe('writeTransaction', () => {
   it('écrit plusieurs lignes de façon atomique', () => {
     const result = writeTransaction(db, USER, (w) => {

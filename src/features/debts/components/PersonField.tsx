@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable } from 'react-native';
 
 import { Card, Input, minTouchTarget, Row, Stack, Text, useTheme } from '@/design-system';
+import { PERSON_NAME_MAX_LENGTH } from '@/lib/debts';
 import { normalizeName } from '@/lib/text';
 import type { DebtPerson } from '@/types/budget';
 
@@ -15,7 +16,6 @@ type Props = {
 };
 
 const MAX_SUGGESTIONS = 5;
-export const PERSON_NAME_MAX_LENGTH = 40;
 
 // Champ « Personne » avec autocomplétion des noms enregistrés (5 suggestions au plus).
 export function PersonField({ value, onChange, people, label = 'Personne', error }: Props) {

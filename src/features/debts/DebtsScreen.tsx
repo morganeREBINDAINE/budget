@@ -17,6 +17,7 @@ import {
   Text,
   useTheme,
 } from '@/design-system';
+import { ReadErrorCard } from '@/features/db/ReadErrorCard';
 import { AppHeader } from '@/features/navigation/AppHeader';
 import { InitialPullError } from '@/features/sync/components/InitialPullError';
 import { LoadingRegion, RowSkeletonList } from '@/features/sync/components/Skeletons';
@@ -26,10 +27,12 @@ import type { DebtDirection } from '@/types/budget';
 
 import { DebtRow } from './components/DebtRow';
 import { DIRECTION_OPTIONS } from './direction';
-import { useDebts, type DebtItem } from './useDebts';
+import { type DebtItem, type DebtsSummary, useDebts } from './useDebts';
 
 type SectionKey = 'active' | 'settled';
 type Section = { key: SectionKey; data: DebtItem[]; count: number };
+
+const EMPTY_SUMMARY: DebtsSummary = { active: [], settled: [], totalRemainingDa: 0 };
 
 const openDebt = (id: string) => router.push({ pathname: '/debts/[id]', params: { id } });
 
@@ -41,9 +44,12 @@ export function DebtsScreen() {
   const insets = useSafeAreaInsets();
   const [direction, setDirection] = useState<DebtDirection>('owed_to_me');
   const [settledOpen, setSettledOpen] = useState(false);
-  const { active, settled, totalRemainingDa } = useDebts(direction);
-  // Pendant le pull initial : skeletons, et actions bloquées par un garde dans chaque handler.
-  const { ready, failed } = useInitialPull();
+  const debts = useDebts(direction);
+  // Pendant le pull initial ou la lecture : skeletons, et actions bloquées par un garde.
+  const { ready: pulled, failed } = useInitialPull();
+  const ready = pulled && debts.status === 'ready';
+  const { active, settled, totalRemainingDa } =
+    debts.status === 'ready' ? debts.data : EMPTY_SUMMARY;
 
   const sections: Section[] = !ready
     ? []
@@ -81,6 +87,11 @@ export function DebtsScreen() {
         ListHeaderComponent={
           failed ? (
             <InitialPullError />
+          ) : debts.status === 'error' ? (
+            <ReadErrorCard
+              title="Dettes indisponibles"
+              message="Impossible de lire les dettes enregistrées sur le téléphone. Ferme puis rouvre l'application."
+            />
           ) : !ready ? (
             <LoadingRegion>
               <TotalRemainingSkeleton direction={direction} />

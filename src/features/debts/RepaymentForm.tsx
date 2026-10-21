@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable } from 'react-native';
 
 import {
@@ -14,84 +14,131 @@ import {
   useSheet,
   useTheme,
 } from '@/design-system';
+import { useDatabase } from '@/db/DatabaseProvider';
+import { useUserId } from '@/features/auth/AuthProvider';
 import { AmountInput } from '@/features/transaction/components/AmountInput';
 import { DateField } from '@/features/transaction/components/DateField';
 import { EurRateField } from '@/features/transaction/components/EurRateField';
-import { remainingDa } from '@/lib/debts';
+import { readLastEurRate, rememberEurRate } from '@/features/transaction/lastEurRate';
+import {
+  DEBT_NOTE_MAX_LENGTH,
+  isRepaymentUnchanged,
+  remainingOf,
+  type RepaymentErrors,
+  validateRepayment,
+} from '@/lib/debts';
 import { formatAmount, toIsoDate } from '@/lib/format';
-import { amountToInput, eurToDa, parseDecimal, toDecimalInput } from '@/lib/money';
-import { fakeRequest } from '@/mocks/account';
-import { MOCK_EUR_RATE } from '@/mocks/budget';
-import { mockDebtPeople, mockDebtRepayments } from '@/mocks/debts';
+import {
+  amountToInput,
+  eurCentsToDa,
+  parseDecimal,
+  parseEurCents,
+  toDecimalInput,
+} from '@/lib/money';
+import { createRepayment, deleteRepayment, updateRepayment } from '@/repositories/debts';
+import { RowNotFoundError } from '@/repositories/write';
 import type { Currency, Debt, DebtRepayment } from '@/types/budget';
 
-type Props = { debt: Debt; repayment?: DebtRepayment };
+type Props = {
+  debt: Debt;
+  personName: string | undefined;
+  // Total des remboursements de la dette (lecture en direct), y compris celui modifié.
+  repaidDa: number;
+  repayment?: DebtRepayment;
+};
 
-type Errors = Partial<Record<'amount' | 'rate' | 'submit', string>>;
+type Errors = RepaymentErrors & { submit?: string };
 
 // Feuille d'ajout / modification d'un remboursement partiel (aucun lien avec le budget).
-export function RepaymentForm({ debt, repayment }: Props) {
+export function RepaymentForm({ debt, personName = 'cette personne', repaidDa, repayment }: Props) {
   const { colors, spacing, radius } = useTheme();
   const { close } = useSheet();
-  const personName = mockDebtPeople.find((p) => p.id === debt.personId)?.name ?? 'cette personne';
+  const db = useDatabase();
+  const userId = useUserId();
+  const writing = useRef(false);
+  const today = toIsoDate(new Date());
   // En modification, le remboursement en cours ne compte pas dans le reste dû autorisé.
-  const maxDa = remainingDa(debt, mockDebtRepayments) + (repayment?.amountDa ?? 0);
+  const maxDa = remainingOf(debt.amountDa, repaidDa - (repayment?.amountDa ?? 0));
 
   const [amount, setAmount] = useState(repayment ? amountToInput(repayment) : '');
   const [currency, setCurrency] = useState<Currency>(repayment?.currency ?? 'DZD');
-  const [rate, setRate] = useState(toDecimalInput(repayment?.eurRate ?? MOCK_EUR_RATE));
-  const [date, setDate] = useState(repayment?.date ?? toIsoDate(new Date()));
+  // Taux du remboursement, sinon dernier taux saisi ; jamais de valeur par défaut.
+  const [rate, setRate] = useState(() => {
+    const initial = repayment?.eurRate ?? readLastEurRate(db, userId);
+    return initial !== null ? toDecimalInput(initial) : '';
+  });
+  const [date, setDate] = useState(repayment?.date ?? today);
   const [note, setNote] = useState(repayment?.note ?? '');
   const [errors, setErrors] = useState<Errors>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const amountValue = parseDecimal(amount);
+  const cents = parseEurCents(amount);
   const rateValue = parseDecimal(rate);
   const previewDa =
-    currency === 'EUR' && amountValue !== null && rateValue !== null && rateValue > 0
-      ? eurToDa(amountValue, rateValue)
+    currency === 'EUR' && cents !== null && rateValue !== null && rateValue > 0
+      ? eurCentsToDa(cents, rateValue)
       : null;
-  const amountDa = currency === 'DZD' ? amountValue : previewDa;
 
   const clearError = (key: keyof Errors) =>
     setErrors((e) => (e[key] || e.submit ? { ...e, [key]: undefined, submit: undefined } : e));
 
-  const validate = (): Errors => {
-    const next: Errors = {};
-    if (amountValue === null || amountValue <= 0) next.amount = 'Saisis un montant supérieur à 0.';
-    else if (currency === 'DZD' && !Number.isInteger(amountValue))
-      next.amount = 'Le montant en dinars doit être un nombre entier.';
-    if (currency === 'EUR' && (rateValue === null || rateValue <= 0))
-      next.rate = 'Saisis un taux supérieur à 0.';
-    if (!next.amount && !next.rate && amountDa !== null && amountDa > maxDa)
-      next.amount = `Le remboursement dépasse le reste dû (${formatAmount(maxDa)}).`;
-    return next;
-  };
-
-  // TODO(phase 3) : écriture SQLite + file de synchro.
-  const save = async () => {
-    const next = validate();
-    setErrors(next);
-    if (Object.keys(next).length > 0) return;
-    try {
-      await fakeRequest(600);
-      close();
-    } catch {
-      setErrors({ submit: "L'enregistrement a échoué. Réessaie." });
+  // Écriture SQLite synchrone (quasi instantanée) : pas de spinner, garde contre le double appui.
+  const save = () => {
+    if (writing.current) return;
+    const result = validateRepayment(
+      { amount, currency, rate, date, note },
+      { today: toIsoDate(new Date()), maxDa },
+    );
+    if (!result.ok) {
+      setErrors(result.errors);
+      return;
     }
+    setErrors({});
+    writing.current = true;
+    // Rien de modifié : aucune écriture (pas d'entrée inutile dans la file de synchro).
+    if (repayment && isRepaymentUnchanged(repayment, result.values)) {
+      close();
+      return;
+    }
+    try {
+      if (repayment) updateRepayment(db, userId, repayment.id, result.values);
+      else createRepayment(db, userId, debt.id, result.values);
+    } catch (error) {
+      writing.current = false;
+      console.error("[db] Échec de l'enregistrement du remboursement", error);
+      setErrors({
+        submit:
+          error instanceof RowNotFoundError
+            ? repayment
+              ? "Ce remboursement n'existe plus."
+              : "Cette dette n'existe plus."
+            : "L'enregistrement a échoué. Réessaie.",
+      });
+      return;
+    }
+    // Remboursement déjà enregistré : un échec ici ne fait que perdre le préremplissage.
+    rememberEurRate(db, userId, result.values.eurRate);
+    close();
   };
 
-  // TODO(phase 3) : suppression logique (deleted_at).
-  const remove = async () => {
+  const remove = () => {
+    if (!repayment || writing.current) return;
+    writing.current = true;
     setDeleteError(null);
     try {
-      await fakeRequest(600);
-      setConfirmDelete(false);
-      close();
-    } catch {
-      setDeleteError('La suppression a échoué. Réessaie.');
+      deleteRepayment(db, userId, repayment.id);
+    } catch (error) {
+      // Déjà supprimé (ex. par une synchro) : le résultat attendu est atteint.
+      if (!(error instanceof RowNotFoundError)) {
+        writing.current = false;
+        console.error('[db] Échec de la suppression du remboursement', error);
+        setDeleteError('La suppression a échoué. Réessaie.');
+        return;
+      }
     }
+    setConfirmDelete(false);
+    close();
   };
 
   const fillRemaining = () => {
@@ -177,7 +224,15 @@ export function RepaymentForm({ debt, repayment }: Props) {
 
         <Row gap="md" align="flex-start">
           <Stack flex={1}>
-            <DateField value={date} onChange={setDate} />
+            <DateField
+              value={date}
+              onChange={(d) => {
+                setDate(d);
+                clearError('date');
+              }}
+              maximumDate={today}
+              error={errors.date}
+            />
           </Stack>
           <Stack flex={1}>
             <Input
@@ -185,6 +240,7 @@ export function RepaymentForm({ debt, repayment }: Props) {
               value={note}
               onChangeText={setNote}
               placeholder="Ex. Virement CCP"
+              maxLength={DEBT_NOTE_MAX_LENGTH}
               returnKeyType="done"
             />
           </Stack>

@@ -14,7 +14,6 @@ import {
   useSheet,
   useTheme,
 } from '@/design-system';
-import type { Database } from '@/db/client';
 import { useDatabase } from '@/db/DatabaseProvider';
 import { useUserId } from '@/features/auth/AuthProvider';
 import { CategoriesReadError } from '@/features/categories/components/CategoriesReadError';
@@ -34,7 +33,6 @@ import {
   type TransactionErrors,
   validateTransaction,
 } from '@/lib/transactions';
-import { getLastEurRate, saveLastEurRate } from '@/repositories/settings';
 import { createTransaction, updateTransaction } from '@/repositories/transactions';
 import { RowNotFoundError } from '@/repositories/write';
 import type { Currency, Transaction, TransactionType } from '@/types/budget';
@@ -44,6 +42,7 @@ import { CategoryGrid } from './components/CategoryGrid';
 import { DateField } from './components/DateField';
 import { DeleteTransactionDialog } from './components/DeleteTransactionDialog';
 import { EurRateField } from './components/EurRateField';
+import { readLastEurRate, rememberEurRate } from './lastEurRate';
 
 type Props = { mode: 'new'; type: TransactionType } | { mode: 'edit'; transaction: Transaction };
 
@@ -51,16 +50,6 @@ type Errors = TransactionErrors & { submit?: string };
 
 const GRID_COLUMNS = 3;
 const GRID_SIZE = 9;
-
-// Dernier taux saisi ; un échec de lecture ne fait que perdre le préremplissage.
-function readLastEurRate(db: Database, userId: string): number | null {
-  try {
-    return getLastEurRate(db, userId);
-  } catch (error) {
-    console.error('[db] Lecture du dernier taux impossible', error);
-    return null;
-  }
-}
 
 // Formulaire d'ajout / modification d'une entrée ou d'une dépense (feuille aux 2/3).
 // Initialisé une seule fois : une mise à jour reçue pendant la saisie (synchro) ne l'écrase pas.
@@ -136,14 +125,8 @@ export function TransactionForm(props: Props) {
       });
       return;
     }
-    if (result.values.eurRate !== null) {
-      // Transaction déjà enregistrée : un échec ici ne fait que perdre le préremplissage.
-      try {
-        saveLastEurRate(db, userId, result.values.eurRate);
-      } catch (error) {
-        console.error('[db] Dernier taux non mémorisé', error);
-      }
-    }
+    // Transaction déjà enregistrée : un échec ici ne fait que perdre le préremplissage.
+    rememberEurRate(db, userId, result.values.eurRate);
     close();
   };
 

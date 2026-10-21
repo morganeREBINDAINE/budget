@@ -1,4 +1,4 @@
-import { and, eq, getTableColumns, isNull, type SQL } from 'drizzle-orm';
+import { and, eq, getTableColumns, isNotNull, isNull, type SQL } from 'drizzle-orm';
 import { randomUUID } from 'expo-crypto';
 
 import type { Database } from '@/db/client';
@@ -44,6 +44,8 @@ export type Writer = {
   insert<T extends SyncedTableName>(tableName: T, values: InsertValues<T>): SyncedRow<T>;
   update<T extends SyncedTableName>(tableName: T, id: string, patch: UpdatePatch<T>): SyncedRow<T>;
   softDelete<T extends SoftDeletableTableName>(tableName: T, id: string): SyncedRow<T>;
+  /** Annule la suppression logique d'une ligne du compte ; `RowNotFoundError` si elle n'est pas supprimée. */
+  restore<T extends SoftDeletableTableName>(tableName: T, id: string): SyncedRow<T>;
 };
 
 // Requêtes génériques : Drizzle ne sait pas typer une union de tables, les types précis sont
@@ -142,6 +144,17 @@ function createWriter(
       if (!existing) throw new RowNotFoundError(tableName);
       const at = nextTimestamp(existing.updatedAt);
       tx.update(table).set({ updatedAt: at, deletedAt: at }).where(rowCondition(table, id)).run();
+      return enqueue(tableName, id, at);
+    },
+
+    restore(tableName, id) {
+      ensureOpen();
+      const table = tableOf(tableName);
+      const deleted = and(eq(table.id, id), eq(table.userId, userId), isNotNull(table.deletedAt));
+      const existing = tx.select().from(table).where(deleted).get();
+      if (!existing) throw new RowNotFoundError(tableName);
+      const at = nextTimestamp(existing.updatedAt);
+      tx.update(table).set({ updatedAt: at, deletedAt: null }).where(deleted).run();
       return enqueue(tableName, id, at);
     },
   };
