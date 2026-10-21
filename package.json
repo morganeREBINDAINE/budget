@@ -1,6 +1,6 @@
 {
   "name": "budget",
-  "main": "expo-router/entry",
+  "main": "index.ts",
   "version": "1.0.0",
   "dependencies": {
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
@@ -12,6 +12,7 @@
     "@supabase/supabase-js": "2.118.0",
     "drizzle-orm": "^0.45.4",
     "expo": "~57.0.30",
+    "expo-background-task": "~57.0.21",
     "expo-constants": "~57.0.22",
     "expo-crypto": "~57.0.4",
     "expo-device": "~57.0.2",
@@ -28,6 +29,7 @@
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.3",
     "expo-system-ui": "~57.0.4",
+    "expo-task-manager": "~57.0.21",
     "expo-web-browser": "~57.0.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",

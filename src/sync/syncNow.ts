@@ -23,6 +23,11 @@ import { SessionError } from '@/sync/session';
 // programmée (elle enverra toute la file). Une écriture pendant une synchronisation en demande une
 // seconde à la fin (sinon elle attendrait le déclencheur suivant). Session refusée : aucun
 // déclencheur automatique jusqu'à la reconnexion (« Se reconnecter avec Google » → `syncNow`).
+//
+// Tâche de fond (`background`, src/features/sync/backgroundSync.ts) : synchronise tout de suite
+// (relance programmée annulée) ou attend la synchronisation en cours. Ni relance programmée en cas
+// d'échec (l'exécution suivante ou l'ouverture de l'app prend le relais) ni toast : l'erreur reste
+// visible sur la carte Compte.
 
 export const OFFLINE_MESSAGE = 'Pas de connexion internet.';
 export const FAILED_MESSAGE = 'La synchronisation a échoué. Réessaie.';
@@ -37,7 +42,7 @@ export const RETRY_DELAYS_MS = [10_000, 30_000, 60_000, 5 * 60_000, 15 * 60_000]
 export const FOREGROUND_MIN_INTERVAL_MS = 60_000;
 
 /** Déclencheurs automatiques (docs/STORAGE.md §3). */
-export type SyncTrigger = 'startup' | 'network' | 'foreground' | 'write';
+export type SyncTrigger = 'startup' | 'network' | 'foreground' | 'write' | 'background';
 
 /** État de la synchronisation en cours ou de la dernière tentative (en mémoire uniquement). */
 export type SyncRunState = {
@@ -58,6 +63,8 @@ export type SyncResult = { ok: true } | { ok: false; reason: 'offline' | 'sessio
 export type SyncOptions = {
   // false : push seul (déconnexion).
   pull?: boolean;
+  // true : tâche de fond, ni relance programmée ni toast.
+  background?: boolean;
 };
 
 /** Dépendances réseau (remplaçables dans les tests). */
@@ -126,6 +133,7 @@ export function syncNow(
 
 /**
  * Déclencheur automatique : synchronise si en ligne, selon les règles décrites en tête de fichier.
+ * Résultat de la synchronisation lancée (ou attendue, tâche de fond), `null` si aucune.
  * Ne rejette jamais.
  */
 export async function requestSync(
@@ -133,11 +141,12 @@ export async function requestSync(
   userId: string,
   trigger: SyncTrigger,
   deps: SyncDeps = defaultDeps,
-): Promise<void> {
-  if (getSyncRunState(userId)?.sessionRefused) return;
-  if (!(await deps.isOnline())) return;
+): Promise<SyncResult | null> {
+  if (getSyncRunState(userId)?.sessionRefused) return null;
+  if (!(await deps.isOnline())) return null;
 
   if (running?.userId === userId) {
+    if (trigger === 'background') return running.promise;
     if (trigger === 'write' && followUp !== userId) {
       followUp = userId;
       void running.promise.then((result) => {
@@ -147,22 +156,22 @@ export async function requestSync(
         if (result.ok) void requestSync(db, userId, 'write', deps);
       });
     }
-    return;
+    return null;
   }
 
-  if (trigger === 'startup' || trigger === 'network') {
+  if (trigger === 'startup' || trigger === 'network' || trigger === 'background') {
     cancelRetry(userId);
   } else {
-    if (retry?.userId === userId && retry.timer) return;
+    if (retry?.userId === userId && retry.timer) return null;
     if (
       trigger === 'foreground' &&
       lastFinished?.userId === userId &&
       Date.now() - lastFinished.at < FOREGROUND_MIN_INTERVAL_MS
     ) {
-      return;
+      return null;
     }
   }
-  await runLocked(db, userId, {}, deps);
+  return runLocked(db, userId, { background: trigger === 'background' }, deps);
 }
 
 /**
@@ -224,7 +233,7 @@ function reportRejected(count: number) {
 async function runSync(
   db: Database,
   userId: string,
-  { pull = true }: SyncOptions,
+  { pull = true, background = false }: SyncOptions,
   deps: SyncDeps,
 ): Promise<SyncResult> {
   patchState(userId, { running: true, progress: 0, nextRetryAt: null, sessionRefused: false });
@@ -239,7 +248,8 @@ async function runSync(
     const pushed = await deps.push(db, userId, (done, total) =>
       patchState(userId, { progress: total === 0 ? 1 : done / total }),
     );
-    reportRejected(pushed.rejected);
+    // Lignes refusées : toujours signalées par la carte Compte (sync_queue), toast app ouverte.
+    if (!background) reportRejected(pushed.rejected);
     patchState(userId, { progress: 1 });
     if (pull) await deps.pull(db, userId);
     setSetting(db, userId, 'last_synced_at', new Date().toISOString());
@@ -254,7 +264,7 @@ async function runSync(
     }
     const timedOut = deps.requestTimeouts() > timeoutsBefore;
     patchState(userId, { running: false, error: timedOut ? TIMEOUT_MESSAGE : FAILED_MESSAGE });
-    scheduleRetry(db, userId, deps);
+    if (!background) scheduleRetry(db, userId, deps);
     return { ok: false, reason: 'failed' };
   }
 }

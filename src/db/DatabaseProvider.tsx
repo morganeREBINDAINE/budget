@@ -1,4 +1,3 @@
-import { migrate } from 'drizzle-orm/expo-sqlite/migrator';
 import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import {
@@ -13,7 +12,7 @@ import {
 } from 'react';
 
 import { prepareDatabase, type Database } from './client';
-import migrations from './migrations/migrations';
+import { runMigrations } from './migrate';
 
 type Connection = { sqlite: SQLiteDatabase; db: Database };
 
@@ -29,8 +28,6 @@ type Props = {
   // Écran affiché si l'ouverture ou la migration échoue ; `onRetry` relance la préparation.
   ErrorScreen: ComponentType<{ onRetry: () => Promise<void> }>;
 };
-
-const runMigrations = (db: Database) => migrate(db, migrations);
 
 /**
  * Ouvre la base SQLite et applique les migrations au démarrage.

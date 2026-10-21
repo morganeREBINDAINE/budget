@@ -324,7 +324,7 @@ describe('requestSync (déclencheurs automatiques)', () => {
 
   it('hors ligne : aucune requête et état inchangé', async () => {
     const d = deps({ isOnline: jest.fn(async () => false) });
-    for (const trigger of ['startup', 'network', 'foreground', 'write'] as const) {
+    for (const trigger of ['startup', 'network', 'foreground', 'write', 'background'] as const) {
       await store.requestSync(db, USER, trigger, d);
     }
     expect(d.push).not.toHaveBeenCalled();
@@ -420,7 +420,7 @@ describe('requestSync (déclencheurs automatiques)', () => {
       .mockResolvedValue(NOTHING);
     const d = deps({ push });
     await store.syncNow(db, USER, {}, d);
-    for (const trigger of ['startup', 'network', 'foreground', 'write'] as const) {
+    for (const trigger of ['startup', 'network', 'foreground', 'write', 'background'] as const) {
       await store.requestSync(db, USER, trigger, d);
     }
     expect(push).toHaveBeenCalledTimes(1);
@@ -454,5 +454,75 @@ describe('requestSync (déclencheurs automatiques)', () => {
     await jest.advanceTimersByTimeAsync(0);
     expect(push).toHaveBeenCalledTimes(2);
     release();
+  });
+});
+
+describe('requestSync (tâche de fond)', () => {
+  const NOW = new Date('2026-10-20T14:00:00.000Z');
+
+  beforeEach(() => {
+    jest.useFakeTimers({ now: NOW });
+  });
+
+  it('synchronise tout de suite et renvoie le résultat', async () => {
+    const d = deps();
+    await expect(store.requestSync(db, USER, 'background', d)).resolves.toEqual({ ok: true });
+    expect(d.push).toHaveBeenCalledTimes(1);
+    expect(d.pull).toHaveBeenCalledTimes(1);
+  });
+
+  it('hors ligne : rien, résultat null', async () => {
+    const d = deps({ isOnline: jest.fn(async () => false) });
+    await expect(store.requestSync(db, USER, 'background', d)).resolves.toBeNull();
+    expect(d.push).not.toHaveBeenCalled();
+  });
+
+  it('échec : erreur exposée, ni relance programmée ni minuteur', async () => {
+    const d = deps({ pull: failingPull() });
+    await expect(store.requestSync(db, USER, 'background', d)).resolves.toEqual({
+      ok: false,
+      reason: 'failed',
+    });
+    expect(store.getSyncRunState(USER)).toMatchObject({
+      error: store.FAILED_MESSAGE,
+      nextRetryAt: null,
+    });
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('annule la relance programmée et synchronise sans attendre', async () => {
+    const pull = jest
+      .fn<Promise<void>, []>()
+      .mockRejectedValueOnce(new Error('503'))
+      .mockResolvedValue(undefined);
+    const d = deps({ pull });
+    await store.syncNow(db, USER, {}, d);
+    expect(jest.getTimerCount()).toBe(1);
+
+    await expect(store.requestSync(db, USER, 'background', d)).resolves.toEqual({ ok: true });
+    expect(pull).toHaveBeenCalledTimes(2);
+    expect(jest.getTimerCount()).toBe(0);
+    expect(store.getSyncRunState(USER)?.nextRetryAt).toBeNull();
+  });
+
+  it('pas de toast pour les éléments mis de côté', async () => {
+    const d = deps({ push: jest.fn(async () => ({ sent: 3, rejected: 2 })) });
+    await expect(store.requestSync(db, USER, 'background', d)).resolves.toEqual({ ok: true });
+    expect(report).not.toHaveBeenCalled();
+  });
+
+  it('synchro en cours : attend sa fin et renvoie son résultat', async () => {
+    let release: () => void = () => undefined;
+    const push = jest.fn(
+      () => new Promise<PushResult>((resolve) => (release = () => resolve(NOTHING))),
+    );
+    const d = deps({ push });
+    const first = store.syncNow(db, USER, {}, d);
+    const background = store.requestSync(db, USER, 'background', d);
+    await jest.advanceTimersByTimeAsync(0);
+    release();
+    await expect(background).resolves.toEqual({ ok: true });
+    await first;
+    expect(push).toHaveBeenCalledTimes(1);
   });
 });

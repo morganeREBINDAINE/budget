@@ -4,6 +4,7 @@ import { useEffect, type ComponentProps } from 'react';
 import { useDatabase } from '@/db/DatabaseProvider';
 import { useTheme } from '@/design-system';
 import { useUserId } from '@/features/auth/AuthProvider';
+import { registerBackgroundSync } from '@/features/sync/backgroundSync';
 import { MenuProvider } from '@/features/navigation/MenuProvider';
 import { ReauthNotifier } from '@/features/sync/ReauthNotifier';
 import { startAutoSync } from '@/sync/autoSync';
@@ -24,6 +25,10 @@ export default function AppLayout() {
   useEffect(() => startAutoSync(db, userId), [db, userId]);
   // Déconnexion ou changement de compte : plus de relance automatique pour ce compte.
   useEffect(() => () => cancelScheduledSync(userId), [userId]);
+  // Synchro app fermée (retirée à la déconnexion manuelle, AuthProvider).
+  useEffect(() => {
+    void registerBackgroundSync();
+  }, []);
   // La feuille (fond assombri + animation) est dessinée par <Sheet> dans l'écran lui-même.
   const sheet: ComponentProps<typeof Stack.Screen>['options'] = {
     presentation: 'transparentModal',

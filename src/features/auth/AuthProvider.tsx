@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { unregisterBackgroundSync } from '@/features/sync/backgroundSync';
 import { reportError } from '@/lib/errors';
 import { isOnline } from '@/lib/network';
 import { secureSessionStorage } from '@/lib/secureSessionStorage';
@@ -190,6 +191,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Pour que le sélecteur de compte réapparaisse à la prochaine connexion.
       await signOutFromGoogle().catch((e: unknown) => console.warn('[auth] signOut Google', e));
       await clearLocalAccount();
+      // Plus de synchro app fermée (sans compte local, la tâche ne ferait rien de toute façon).
+      await unregisterBackgroundSync();
       accountRef.current = null;
       setState({ status: 'signedOut' });
     } finally {

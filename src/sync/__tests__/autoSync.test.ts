@@ -57,7 +57,7 @@ const triggers = () => request.mock.calls.map(([, , trigger]) => trigger);
 
 beforeEach(() => {
   jest.useFakeTimers();
-  request.mockReset().mockResolvedValue(undefined);
+  request.mockReset().mockResolvedValue(null);
   pullStatus.mockReset();
   initialPull.mockReset().mockResolvedValue(undefined);
   online.mockReset().mockResolvedValue(true);
