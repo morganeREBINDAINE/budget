@@ -144,6 +144,31 @@ describe('pushAll', () => {
     expect(queue()).toHaveLength(0);
   });
 
+  it('réponse perdue après l’enregistrement côté serveur : même version renvoyée, sans doublon', async () => {
+    addPerson('A');
+    addPerson('B');
+    // Le serveur enregistre le lot, puis la réponse se perd (délai dépassé, app tuée).
+    const server = new Map<string, RemoteRow>();
+    let lost = true;
+    const upsert: UpsertRows = async (_tableName, rows) => {
+      rows.forEach((row) => server.set(row.id as string, row));
+      if (lost) {
+        lost = false;
+        throw new Error('Le serveur ne répond pas');
+      }
+    };
+    await expect(pushAll(db, USER, upsert)).rejects.toThrow('Le serveur ne répond pas');
+    const firstSent = new Map(server);
+    expect(queue()).toHaveLength(2);
+
+    await pushAll(db, USER, upsert);
+    // Upsert par id : aucune ligne en double, et la version renvoyée est identique (même
+    // updated_at, ignorée par skip_stale_update).
+    expect([...server.keys()].sort()).toEqual([...firstSent.keys()].sort());
+    for (const [id, row] of server) expect(row).toEqual(firstSent.get(id));
+    expect(queue()).toHaveLength(0);
+  });
+
   it('garde une écriture faite pendant l’envoi', async () => {
     addPerson('A');
     let written = false;

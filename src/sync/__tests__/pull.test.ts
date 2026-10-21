@@ -133,6 +133,29 @@ describe('pullAll', () => {
     expect(db.select().from(categories).all()).toHaveLength(1);
   });
 
+  it('coupure entre deux pages d’une table : repère gardé, tout récupéré au pull suivant sans doublon', async () => {
+    const rows = Array.from({ length: PAGE_SIZE + 5 }, (_, i) =>
+      person(`p-${String(i).padStart(5, '0')}`, ts(2)),
+    );
+    const server = fakeServer({ debt_people: rows });
+    let cut = true;
+    const interrupted: FetchPage = async (params) => {
+      if (cut && params.tableName === 'debt_people' && params.after) {
+        cut = false;
+        throw new Error('Réseau coupé');
+      }
+      return server.fetchPage(params);
+    };
+    await expect(pullAll(db, USER, interrupted)).rejects.toThrow('Réseau coupé');
+    // La première page est enregistrée, le repère n'a pas bougé.
+    expect(db.select().from(debtPeople).all()).toHaveLength(PAGE_SIZE);
+    expect(getSetting(db, USER, 'last_pulled_at')).toBeNull();
+
+    await pullAll(db, USER, interrupted);
+    expect(db.select().from(debtPeople).all()).toHaveLength(rows.length);
+    expect(getSetting(db, USER, 'last_pulled_at')).not.toBeNull();
+  });
+
   it('refuse une ligne invalide sans l’enregistrer', async () => {
     const { deleted_at: _deleted, ...incomplete } = person('p-1', ts(1));
     await expect(
