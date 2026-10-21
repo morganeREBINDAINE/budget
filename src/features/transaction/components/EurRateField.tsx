@@ -19,7 +19,7 @@ export function EurRateField({ rate, onChangeRate, previewDa, error }: Props) {
           value={rate}
           onChangeText={onChangeRate}
           keyboardType="decimal-pad"
-          placeholder="250"
+          placeholder="Ex. 250"
           rightIcon={
             <Text variant="bodySmall" color="textMuted">
               DA / €

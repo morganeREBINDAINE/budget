@@ -3,12 +3,14 @@ import { useCallback, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { screenPadding, Stack, useTheme } from '@/design-system';
+import { useCategories } from '@/features/categories/useCategories';
 import { AppHeader } from '@/features/navigation/AppHeader';
 import { PayDueDialog } from '@/features/recurring/components/PayDueDialog';
 import { useInitialPull } from '@/features/sync/useInitialPull';
+import { DeleteTransactionDialog } from '@/features/transaction/components/DeleteTransactionDialog';
 import { currentYearMonth, shiftMonth, type YearMonth } from '@/lib/format';
 import { mockDuePayments } from '@/mocks/recurring';
-import type { DuePayment } from '@/types/budget';
+import type { DuePayment, Transaction } from '@/types/budget';
 
 import { FabGroup } from './components/FabGroup';
 import { HomeSkeleton } from './components/HomeSkeleton';
@@ -22,6 +24,8 @@ export function HomeScreen() {
   // TODO(phase 3) : échéances dues calculées par lib/recurring.ts.
   const [duePayments, setDuePayments] = useState<DuePayment[]>(mockDuePayments);
   const [paying, setPaying] = useState<DuePayment | null>(null);
+  const [deleting, setDeleting] = useState<Transaction | null>(null);
+  const categories = useCategories();
   // Pendant le pull initial : skeletons, et actions bloquées par un garde dans chaque handler.
   const { ready, failed } = useInitialPull();
 
@@ -37,6 +41,7 @@ export function HomeScreen() {
     (id: string) => router.push({ pathname: '/transaction/[id]', params: { id } }),
     [],
   );
+  const closeDelete = useCallback(() => setDeleting(null), []);
   // TODO(phase 7) : export JSON.
   const exportData = useCallback(() => {
     if (!ready) return;
@@ -53,12 +58,14 @@ export function HomeScreen() {
     (m: YearMonth) => (
       <MonthPage
         month={m}
+        categories={categories}
         duePayments={duePayments}
         onPayDue={setPaying}
         onOpenTransaction={openTransaction}
+        onDeleteTransaction={setDeleting}
       />
     ),
-    [duePayments, openTransaction],
+    [categories, duePayments, openTransaction],
   );
 
   return (
@@ -83,6 +90,12 @@ export function HomeScreen() {
         due={paying}
         onCancel={() => setPaying(null)}
         onPaid={markPaid}
+      />
+      <DeleteTransactionDialog
+        key={deleting?.id ?? 'closed'}
+        transaction={deleting}
+        onCancel={closeDelete}
+        onDeleted={closeDelete}
       />
     </SafeAreaView>
   );

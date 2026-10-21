@@ -22,3 +22,15 @@ export function setSetting(db: Database, userId: string, key: SettingKey, value:
     .onConflictDoUpdate({ target: [settings.userId, settings.key], set: { value } })
     .run();
 }
+
+/** Dernier taux DA/EUR saisi (transactions, dettes, remboursements), `null` si jamais saisi. */
+export function getLastEurRate(db: Database, userId: string): number | null {
+  const value = getSetting(db, userId, 'last_eur_rate');
+  const rate = value === null ? NaN : Number(value);
+  return Number.isFinite(rate) && rate > 0 ? rate : null;
+}
+
+/** Mémorise le dernier taux saisi (préremplit le champ « Taux du jour »). */
+export function saveLastEurRate(db: Database, userId: string, rate: number): void {
+  setSetting(db, userId, 'last_eur_rate', String(rate));
+}

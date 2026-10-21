@@ -2,35 +2,53 @@ import { memo, useCallback } from 'react';
 import { FlatList, type ListRenderItem } from 'react-native';
 
 import { FAB_AREA_HEIGHT, Row, screenPadding, Stack, Text, useTheme } from '@/design-system';
+import type { LiveData } from '@/db/liveData';
 import { DuePaymentBanner } from '@/features/recurring/components/DuePaymentBanner';
+import type { MonthSummary } from '@/lib/budget';
 import { formatMonth, type YearMonth } from '@/lib/format';
-import type { DuePayment, Transaction } from '@/types/budget';
+import type { Category, DuePayment, Transaction } from '@/types/budget';
 
 import { CategoryChart } from './components/CategoryChart';
 import { EmptyState } from './components/EmptyState';
+import { HomeSkeleton } from './components/HomeSkeleton';
+import { OrphanExpensesNotice } from './components/OrphanExpensesNotice';
 import { TotalCard } from './components/TotalCard';
 import { TransactionRow } from './components/TransactionRow';
 import { useMonthSummary } from './useMonthSummary';
 
 type Props = {
   month: YearMonth;
+  // Catégories du compte, lues une seule fois par l'accueil pour les 3 pages du carrousel.
+  categories: LiveData<Category[]>;
   // Échéances non payées : affichées sur tous les mois, sous le graphique.
   duePayments: DuePayment[];
   onPayDue: (due: DuePayment) => void;
   onOpenTransaction: (id: string) => void;
+  onDeleteTransaction: (transaction: Transaction) => void;
 };
+
+type ContentProps = Omit<Props, 'categories'> & { summary: MonthSummary };
 
 const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
 
+// Page d'un mois : skeletons au premier chargement, bloc d'erreur si la lecture locale échoue.
+export const MonthPage = memo(function MonthPage({ categories, ...rest }: Props) {
+  const summary = useMonthSummary(rest.month, categories);
+  if (summary.status === 'loading') return <HomeSkeleton month={rest.month} />;
+  if (summary.status === 'error') return <HomeSkeleton month={rest.month} readError />;
+  return <MonthContent summary={summary.data} {...rest} />;
+});
+
 // Contenu défilant d'un mois : cartes Entrées / Dépenses, graphique, échéances dues, liste « Détail ».
-export const MonthPage = memo(function MonthPage({
+function MonthContent({
   month,
+  summary,
   duePayments,
   onPayDue,
   onOpenTransaction,
-}: Props) {
+  onDeleteTransaction,
+}: ContentProps) {
   const { spacing } = useTheme();
-  const summary = useMonthSummary(month);
 
   const renderItem: ListRenderItem<Transaction> = useCallback(
     ({ item }) => (
@@ -38,16 +56,19 @@ export const MonthPage = memo(function MonthPage({
         transaction={item}
         category={item.categoryId ? summary.categoriesById.get(item.categoryId) : undefined}
         onPress={onOpenTransaction}
+        onLongPress={onDeleteTransaction}
       />
     ),
-    [summary.categoriesById, onOpenTransaction],
+    [summary.categoriesById, onOpenTransaction, onDeleteTransaction],
   );
 
   const header = (
     <Stack gap="xl" style={{ marginBottom: spacing.lg }}>
-
-      {summary.expenseDa > 0 && (
+      {summary.byCategory.length > 0 && (
         <CategoryChart totals={summary.byCategory} totalDa={summary.expenseDa} />
+      )}
+      {summary.orphanExpenses.length > 0 && (
+        <OrphanExpensesNotice expenses={summary.orphanExpenses} />
       )}
       {duePayments.length > 0 && (
         <Stack gap="md">
@@ -94,7 +115,7 @@ export const MonthPage = memo(function MonthPage({
       showsVerticalScrollIndicator={false}
     />
   );
-});
+}
 
 function Separator() {
   const { spacing } = useTheme();

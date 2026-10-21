@@ -10,6 +10,7 @@ import {
   Text,
   useTheme,
 } from '@/design-system';
+import { ReadErrorCard } from '@/features/db/ReadErrorCard';
 import { InitialPullError } from '@/features/sync/components/InitialPullError';
 import { LoadingRegion, RowSkeletonList } from '@/features/sync/components/Skeletons';
 import { formatMonth, type YearMonth } from '@/lib/format';
@@ -18,12 +19,15 @@ type Props = {
   month: YearMonth;
   // Échec du pull : bloc d'erreur (« Réessayer » ou reconnexion) à la place des skeletons.
   failed?: boolean;
+  // Échec de la lecture locale du mois (toast déjà affiché) : bloc d'erreur.
+  readError?: boolean;
 };
 
 const CHART_SIZE = 200;
 
-// Contenu d'un mois pendant le pull initial : mêmes blocs que MonthPage, données remplacées.
-export function HomeSkeleton({ month, failed = false }: Props) {
+// Contenu d'un mois pendant le pull initial ou le premier chargement : mêmes blocs que MonthPage,
+// données remplacées.
+export function HomeSkeleton({ month, failed = false, readError = false }: Props) {
   const { spacing } = useTheme();
   return (
     <ScrollView
@@ -36,12 +40,13 @@ export function HomeSkeleton({ month, failed = false }: Props) {
     >
       {failed ? (
         <InitialPullError />
+      ) : readError ? (
+        <ReadErrorCard
+          title="Transactions indisponibles"
+          message="Impossible de lire les données enregistrées sur le téléphone. Ferme puis rouvre l'application."
+        />
       ) : (
         <LoadingRegion gap="xl">
-          <Row gap="md" align="stretch">
-            <TotalCardSkeleton label="Entrées" />
-            <TotalCardSkeleton label="Dépenses" />
-          </Row>
           <Card radius="xl" padding="lg" gap="lg" align="center">
             <Skeleton circle={CHART_SIZE} />
             <Row gap="lg" wrap justify="center">
@@ -50,6 +55,10 @@ export function HomeSkeleton({ month, failed = false }: Props) {
               <Skeleton text="bodySmall" width={72} />
             </Row>
           </Card>
+          <Row gap="md" align="stretch">
+            <TotalCardSkeleton label="Entrées" />
+            <TotalCardSkeleton label="Dépenses" />
+          </Row>
           <Stack gap="lg">
             <Row gap="sm" align="baseline">
               <Text variant="title">Détail</Text>

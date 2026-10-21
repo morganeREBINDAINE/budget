@@ -47,8 +47,12 @@ export function currentYearMonth(now = new Date()): YearMonth {
   return { year: now.getFullYear(), month: now.getMonth() + 1 };
 }
 
-export function isInMonth(date: string, { year, month }: YearMonth): boolean {
-  return date.startsWith(`${year}-${String(month).padStart(2, '0')}`);
+const firstDayOf = ({ year, month }: YearMonth) =>
+  `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-01`;
+
+// Bornes d'un mois en dates YYYY-MM-DD : [1er du mois, 1er du mois suivant[.
+export function monthBounds(ym: YearMonth): { start: string; end: string } {
+  return { start: firstDayOf(ym), end: firstDayOf(shiftMonth(ym, 1)) };
 }
 
 export const toIsoDate = (d: Date) =>

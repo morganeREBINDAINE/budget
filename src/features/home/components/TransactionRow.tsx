@@ -1,34 +1,49 @@
+import * as Haptics from 'expo-haptics';
 import { memo } from 'react';
 import { Pressable } from 'react-native';
 
 import { Card, Row, Stack, Text, useTheme } from '@/design-system';
 import { CategoryIcon } from '@/features/categories/components/CategoryIcon';
-import { formatAmount, formatListDate } from '@/lib/format';
+import { formatAmount, formatListDate, formatTime } from '@/lib/format';
 import type { Category, Transaction } from '@/types/budget';
 
 type Props = {
   transaction: Transaction;
   category: Category | undefined;
   onPress: (id: string) => void;
+  // Appui long : demande de suppression (pas de glissement, réservé au changement de mois).
+  onLongPress: (transaction: Transaction) => void;
 };
 
-// Ligne de la liste « Détail » (glissement pour supprimer : tâche Transaction).
+// Ligne de la liste « Détail » : appui → modifier, appui long → supprimer.
 export const TransactionRow = memo(function TransactionRow({
   transaction,
   category,
   onPress,
+  onLongPress,
 }: Props) {
   const { colors, motion } = useTheme();
   const isIncome = transaction.type === 'income';
   const label = isIncome ? 'Entrée' : (category?.name ?? 'Sans catégorie');
   const title = transaction.note ?? label;
-  const time = transaction.createdAt.slice(11, 16);
+  const time = formatTime(transaction.createdAt);
+  const requestDelete = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    onLongPress(transaction);
+  };
 
   return (
     <Pressable
       onPress={() => onPress(transaction.id)}
+      onLongPress={requestDelete}
       accessibilityRole="button"
       accessibilityLabel={`${title}, modifier`}
+      accessibilityHint="Appui long pour supprimer"
+      // L'appui long est caché : action « Supprimer » proposée aussi aux lecteurs d'écran.
+      accessibilityActions={[{ name: 'delete', label: 'Supprimer' }]}
+      onAccessibilityAction={(e) => {
+        if (e.nativeEvent.actionName === 'delete') onLongPress(transaction);
+      }}
       style={({ pressed }) => ({ transform: [{ scale: pressed ? motion.pressScale : 1 }] })}
     >
       <Card padding="lg" radius="xl">

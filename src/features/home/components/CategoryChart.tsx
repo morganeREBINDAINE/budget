@@ -4,10 +4,10 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { Box, Card, Row, Stack, Text, useTheme } from '@/design-system';
 import { formatNumber } from '@/lib/format';
-import type { Category } from '@/types/budget';
+import type { CategoryTotal } from '@/lib/budget';
 
-export type CategoryTotal = { category: Category; amountDa: number };
-
+// `totalDa` : total affiché au centre (toutes les dépenses du mois, y compris celles sans
+// catégorie valide) ; les pourcentages portent sur la somme des segments.
 type Props = { totals: CategoryTotal[]; totalDa: number };
 
 const MAX_SIZE = 340;
@@ -62,7 +62,8 @@ export function CategoryChart({ totals, totalDa }: Props) {
   const r = size / 2 - LABEL_SPACE - STROKE / 2;
   const center = size / 2;
 
-  const fractions = segments.map((s) => s.amountDa / totalDa);
+  const segmentsTotal = segments.reduce((acc, s) => acc + s.amountDa, 0);
+  const fractions = segments.map((s) => s.amountDa / segmentsTotal);
   const starts = fractions.map((_, i) => fractions.slice(0, i).reduce((acc, f) => acc + f, 0));
 
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);

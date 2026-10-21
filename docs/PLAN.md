@@ -15,7 +15,7 @@ Ordre de travail : **1. squelette → 2. toutes les pages (UI seule, données fa
 - Totaux du mois : Entrées et Dépenses (affichage seul, non cliquable).
 - Graphique des dépenses par catégorie (affichage seul, non cliquable).
 - Liste « Détail » : entrées + dépenses du mois, de la plus récente à la plus ancienne.
-- Ajout / modification (appui) / suppression (glissement) d'entrées et de dépenses.
+- Ajout / modification (appui) / suppression (appui long sur la ligne ou bouton de la feuille, avec confirmation ; pas de glissement, réservé au changement de mois) d'entrées et de dépenses.
 - Saisie en EUR possible : taux saisi manuellement (prérempli avec le dernier utilisé), stockage en DA.
 - 9 catégories de dépenses (nom, couleur, icône), limite fixe de 9.
 - Synchronisation en arrière-plan avec file d'attente hors ligne, état visible sur la page Compte.
@@ -227,7 +227,7 @@ Reste dû = `debts.amount_da − Σ debt_repayments.amount_da`. Reste = 0 → de
 
 Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défaut + ~20 transactions sur 2–3 mois). Aucune base, aucun réseau.
 
-- [x] Composants partagés : `AppHeader`, `MonthSelector`, `TotalCard`, `CategoryChart`, `TransactionRow` (avec glissement), `FabGroup`, `AmountInput`, `CurrencyToggle` (intégré à `AmountInput`), `DateField`, `CategoryPicker` (`CategoryGrid`), `ColorPicker`, `IconPicker`, `SyncStatusCard`, `EmptyState`, `ConfirmDialog`, `DuePaymentBanner` (encart rouge + bouton « J'ai payé »), `DayOfMonthPicker`, `Fab`, `SegmentedControl`, `Switch`, `Avatar`, `FormSectionList`, `EurRateField`.
+- [x] Composants partagés : `AppHeader`, `MonthSelector`, `TotalCard`, `CategoryChart`, `TransactionRow` (appui long pour supprimer, cf. phase 6), `FabGroup`, `AmountInput`, `CurrencyToggle` (intégré à `AmountInput`), `DateField`, `CategoryPicker` (`CategoryGrid`), `ColorPicker`, `IconPicker`, `SyncStatusCard`, `EmptyState`, `ConfirmDialog`, `DuePaymentBanner` (encart rouge + bouton « J'ai payé »), `DayOfMonthPicker`, `Fab`, `SegmentedControl`, `Switch`, `Avatar`, `FormSectionList`, `EurRateField`.
 - [x] Formatage (`src/lib/format.ts` fait pour l'accueil) : montants `12 500 DA` (séparateur d'espace), mois en français (« Octobre 2026 »), dates de la liste.
 - [x] **Connexion** : logo + bouton Google officiel (session factice : l'appui mène à l'accueil).
 - [x] **Accueil** : barre haute (logo + export, pas d'avatar), mois ‹ ›, cartes Entrées / Dépenses, graphique identique au design, section « Détail », boutons flottants, état vide pour un mois sans transaction, glissement ← → pour changer de mois (en-tête et sélecteur fixes, carrousel : mois voisins visibles pendant le glissement).
@@ -285,7 +285,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 
 > Une fonctionnalité à la fois, complète : repositories (écritures via l'outil commun), requêtes réactives `useLiveQuery` à la place des mocks, validation des formulaires, tests.
 
-- [ ] Accueil + Transactions : transactions du mois triées par date desc puis `created_at` desc, totaux du mois, totaux par catégorie, CRUD transactions ; `lib/money.ts` (conversion EUR → DA, arrondi, parsing des saisies) ; validation (montant > 0, taux > 0 si EUR, catégorie requise pour une dépense) ; mémoriser `last_eur_rate` et préremplir le champ taux. Tests : conversion, totaux, tri.
+- [x] Accueil + Transactions : transactions du mois triées par date desc puis `created_at` desc (`src/repositories/transactions.ts`, intervalle `[1er du mois, 1er du mois suivant[` sur l'index `(user_id, date)`), totaux du mois et par catégorie calculés en JS sur les lignes du mois (`src/lib/budget.ts`, `summarizeMonth`), lecture réactive (`useLiveQuery`, `useMonthTransactions` / `useTransaction`, catégories lues une fois pour les 3 pages du carrousel) ; skeletons au premier chargement d'un mois, bloc d'erreur + toast si la lecture locale échoue. CRUD via l'outil d'écriture commun ; écriture synchrone : pas de spinner, garde contre le double appui, échec affiché au-dessus du bouton, aucune écriture si rien n'a changé, formulaire initialisé une seule fois. Suppression : appui long sur une ligne (retour haptique, action d'accessibilité « Supprimer ») ou bouton de la feuille, confirmée par `ConfirmDialog` (`DeleteTransactionDialog`) ; pas de glissement (conflit avec le changement de mois). `lib/money.ts` : centimes EUR sans flottant (2 décimales max), `amount_da = round(centimes × taux / 100)`, bornes 999 999 999 DA et 9 999 999,99 € (colonnes `integer` Postgres), montant converti ≥ 1 DA. Validation (`src/lib/transactions.ts`) : montant > 0 (entier en DA), taux > 0 si EUR, date ≤ aujourd'hui (sélecteur borné aussi), catégorie existante pour une dépense, note de 100 caractères max (vide → null). `last_eur_rate` (`src/repositories/settings.ts`, partagé avec les dettes) : mémorisé à chaque enregistrement en EUR, prérempli ; aucun taux par défaut (champ vide). Dépense dont la catégorie est introuvable : comptée dans le total, hors graphique, listée dans un encart d'erreur fixe sous le graphique (`OrphanExpensesNotice`, 10 lignes max, ids affichés pour le diagnostic). Heure de la ligne en heure locale. Tests : conversion, validation, totaux, tri et intervalle du mois, écritures et `sync_queue`, dernier taux.
 - [ ] Paiements réguliers : repositories, `lib/recurring.ts` (calcul des échéances dues, jour 31 → dernier jour du mois), « J'ai payé » = création de la dépense + de l'occurrence dans une même transaction SQLite (et leurs entrées `sync_queue`). Tests : échéances mensuelles et annuelles, mois courts, 29 février, échéances en retard multiples, paiement déjà confirmé.
 - [ ] Dettes : repositories, création auto de la personne à l'enregistrement, calcul du reste dû, validation (montant > 0, taux > 0 si EUR, remboursement ≤ reste dû, personne requise). Tests : reste dû et conversions.
 
@@ -342,6 +342,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 9. Les paiements réguliers sont mensuels (un jour du mois) ou annuels (un jour + un mois), en DA, toujours des dépenses ; pas de notification push, l'encart s'affiche à l'ouverture de l'app.
 10. Plusieurs échéances non payées d'un même paiement donnent plusieurs encarts (un par échéance).
 11. Modifier un paiement régulier ne touche pas les dépenses déjà enregistrées.
+12. Une entrée ou une dépense ne peut pas être datée dans le futur.
 
 ## Risques
 

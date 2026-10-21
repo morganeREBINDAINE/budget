@@ -12,19 +12,24 @@ type Props = {
   onChange: (value: string) => void;
   label?: string;
   hint?: string;
+  // YYYY-MM-DD : dernière date sélectionnable (ex. aujourd'hui).
+  maximumDate?: string;
+  error?: string;
 };
 
 // Champ « Date » : ouvre le sélecteur natif (dialogue sur Android, calendrier en ligne sur iOS).
-export function DateField({ value, onChange, label = 'Date', hint }: Props) {
+export function DateField({ value, onChange, label = 'Date', hint, maximumDate, error }: Props) {
   const { colors, radius, spacing } = useTheme();
   const [iosOpen, setIosOpen] = useState(false);
   const date = parseIsoDate(value);
+  const max = maximumDate ? parseIsoDate(maximumDate) : undefined;
 
   const open = () => {
     if (Platform.OS === 'android') {
       DateTimePickerAndroid.open({
         value: date,
         mode: 'date',
+        maximumDate: max,
         onChange: (event, selected) => {
           if (event.type === 'set' && selected) onChange(toIsoDate(selected));
         },
@@ -47,7 +52,7 @@ export function DateField({ value, onChange, label = 'Date', hint }: Props) {
           minHeight: minTouchTarget,
           borderRadius: radius.md,
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: error ? colors.danger : colors.border,
           paddingHorizontal: spacing.md,
           justifyContent: 'center',
           backgroundColor: pressed ? colors.surfaceMuted : colors.surface,
@@ -64,7 +69,11 @@ export function DateField({ value, onChange, label = 'Date', hint }: Props) {
           </Text>
         </Row>
       </Pressable>
-      {hint ? (
+      {error ? (
+        <Text variant="bodySmall" color="danger" accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      ) : hint ? (
         <Text variant="bodySmall" color="textSecondary">
           {hint}
         </Text>
@@ -74,6 +83,7 @@ export function DateField({ value, onChange, label = 'Date', hint }: Props) {
           value={date}
           mode="date"
           display="inline"
+          maximumDate={max}
           accentColor={colors.primary}
           onChange={(_, selected) => {
             if (selected) onChange(toIsoDate(selected));
