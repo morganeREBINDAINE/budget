@@ -16,6 +16,7 @@
     "expo-background-task": "~57.0.21",
     "expo-constants": "~57.0.22",
     "expo-crypto": "~57.0.4",
+    "expo-dev-client": "~57.0.20",
     "expo-device": "~57.0.2",
     "expo-drizzle-studio-plugin": "^0.2.1",
     "expo-file-system": "~57.0.7",
