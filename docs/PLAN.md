@@ -306,7 +306,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 ## Phase 9 — Build et livraison
 
 - [x] `eas.json` : profils `development` et `production` (APK). Projet lié par `eas init` (`@mrebindaine/budget`, `owner` et `extra.eas.projectId` dans `app.json`). `expo-dev-client` installé : `development` = dev client APK interne, envoi des source maps Sentry désactivé (`SENTRY_DISABLE_AUTO_UPLOAD`) ; `production` = APK release interne. `versionCode` géré par EAS (`appVersionSource: "remote"`, `autoIncrement` en production). Builds dans le cloud EAS (`eas build --local` indisponible sous Windows). Pas de profil `preview`. Nouveau development build requis.
-- [ ] Google Cloud : second client OAuth Android avec la SHA-1 du keystore EAS (`eas credentials`), sinon la connexion Google échoue (`DEVELOPER_ERROR`) dans l'APK EAS.
+- [x] Google Cloud : second client OAuth Android avec la SHA-1 du keystore EAS (`eas credentials`), sinon la connexion Google échoue (`DEVELOPER_ERROR`) dans l'APK EAS. Client « Budget Android (EAS) » (`com.mrebi.budget`), keystore géré par EAS et commun aux profils `development` et `production` ; client Android debug et client Web inchangés, rien à changer côté Supabase. Vérification reportée à la recette (connexion Google dans l'APK EAS).
 - [ ] Secrets EAS (Supabase, Google Web Client ID, Sentry : `EXPO_PUBLIC_SENTRY_DSN` et `SENTRY_AUTH_TOKEN` en secret).
 - [ ] EAS Update configuré (canal `production`).
 - [ ] Installer l'APK sur le téléphone et passer la checklist de recette.
