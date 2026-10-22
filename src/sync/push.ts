@@ -1,5 +1,6 @@
 import type { Database } from '@/db/client';
 import type { SyncedTableName, SyncQueueRow } from '@/db/schema';
+import { captureError } from '@/lib/captureError';
 import { supabase } from '@/lib/supabase';
 import {
   markQueueFailure,
@@ -160,7 +161,12 @@ export async function pushAll(
     report(entryIds.length);
   };
 
-  const reject = (row: PendingRow, e: unknown) => {
+  // Refus du push regroupés par table, opération et raison (message technique, sans valeur) :
+  // un seul événement Sentry par push.
+  const rejections = new Map<string, number>();
+  const reject = (tableName: SyncedTableName, row: PendingRow, e: unknown) => {
+    const key = `${tableName} ${row.op} : ${messageOf(e)}`;
+    rejections.set(key, (rejections.get(key) ?? 0) + row.entryIds.length);
     rejectQueueEntries(db, userId, row.entryIds, messageOf(e), new Date().toISOString());
     result.rejected += row.entryIds.length;
     report(row.entryIds.length);
@@ -187,64 +193,78 @@ export async function pushAll(
     }
   };
 
-  for (;;) {
-    const batch = readQueueBatch(db, userId, PUSH_BATCH_SIZE);
-    if (batch.length === 0) return result;
-    const processed = new Set<string>();
-    const markProcessed = (row: PendingRow) => row.entryIds.forEach((id) => processed.add(id));
-    // Erreur passagère : entrées non traitées du lot marquées, arrêt du push.
-    const stop = (e: unknown): never => {
-      const unsent = batch.map((entry) => entry.id).filter((id) => !processed.has(id));
-      markQueueFailure(db, userId, unsent, messageOf(e));
-      throw e;
-    };
+  try {
+    return await pushBatches();
+  } finally {
+    if (rejections.size > 0) {
+      captureError(new Error('Éléments refusés par le serveur'), {
+        scope: 'sync',
+        reason: 'push-rejected',
+        context: { rejected: result.rejected, ...Object.fromEntries(rejections) },
+      });
+    }
+  }
 
-    for (const [tableName, rows] of groupByTable(batch)) {
-      // Payload local inconvertible (autre compte, colonne inconnue) : refus sans envoi.
-      const toSend: Item[] = [];
-      for (const row of rows) {
-        try {
-          if (row.payload.userId !== userId) {
-            throw new Error(`Entrée d’un autre compte (${tableName})`);
+  async function pushBatches(): Promise<PushResult> {
+    for (;;) {
+      const batch = readQueueBatch(db, userId, PUSH_BATCH_SIZE);
+      if (batch.length === 0) return result;
+      const processed = new Set<string>();
+      const markProcessed = (row: PendingRow) => row.entryIds.forEach((id) => processed.add(id));
+      // Erreur passagère : entrées non traitées du lot marquées, arrêt du push.
+      const stop = (e: unknown): never => {
+        const unsent = batch.map((entry) => entry.id).filter((id) => !processed.has(id));
+        markQueueFailure(db, userId, unsent, messageOf(e));
+        throw e;
+      };
+
+      for (const [tableName, rows] of groupByTable(batch)) {
+        // Payload local inconvertible (autre compte, colonne inconnue) : refus sans envoi.
+        const toSend: Item[] = [];
+        for (const row of rows) {
+          try {
+            if (row.payload.userId !== userId) {
+              throw new Error(`Entrée d’un autre compte (${tableName})`);
+            }
+            toSend.push({
+              row,
+              remote: row.op === 'delete' ? {} : toRemote(tableName, row.payload),
+            });
+          } catch (e) {
+            reject(tableName, row, e);
+            markProcessed(row);
           }
-          toSend.push({
-            row,
-            remote: row.op === 'delete' ? {} : toRemote(tableName, row.payload),
-          });
-        } catch (e) {
-          reject(row, e);
-          markProcessed(row);
-        }
-      }
-
-      // Suppressions d'abord, puis versions.
-      for (const op of ['delete', 'upsert'] as const) {
-        const items = toSend.filter((item) => item.row.op === op);
-        if (items.length === 0) continue;
-
-        const grouped = await trySend(tableName, op, items);
-        if (grouped.ok) {
-          sent(
-            tableName,
-            items.map((item) => item.row),
-          );
-          items.forEach((item) => markProcessed(item.row));
-          continue;
-        }
-        if (!isRejection(grouped.error)) stop(grouped.error);
-        if (items.length === 1) {
-          reject(items[0].row, grouped.error);
-          markProcessed(items[0].row);
-          continue;
         }
 
-        // Refus d'un envoi groupé : renvoi ligne par ligne pour isoler la ou les lignes fautives.
-        for (const item of items) {
-          const single = await trySend(tableName, op, [item]);
-          if (single.ok) sent(tableName, [item.row]);
-          else if (isRejection(single.error)) reject(item.row, single.error);
-          else stop(single.error);
-          markProcessed(item.row);
+        // Suppressions d'abord, puis versions.
+        for (const op of ['delete', 'upsert'] as const) {
+          const items = toSend.filter((item) => item.row.op === op);
+          if (items.length === 0) continue;
+
+          const grouped = await trySend(tableName, op, items);
+          if (grouped.ok) {
+            sent(
+              tableName,
+              items.map((item) => item.row),
+            );
+            items.forEach((item) => markProcessed(item.row));
+            continue;
+          }
+          if (!isRejection(grouped.error)) stop(grouped.error);
+          if (items.length === 1) {
+            reject(tableName, items[0].row, grouped.error);
+            markProcessed(items[0].row);
+            continue;
+          }
+
+          // Refus d'un envoi groupé : renvoi ligne par ligne pour isoler la ou les lignes fautives.
+          for (const item of items) {
+            const single = await trySend(tableName, op, [item]);
+            if (single.ok) sent(tableName, [item.row]);
+            else if (isRejection(single.error)) reject(tableName, item.row, single.error);
+            else stop(single.error);
+            markProcessed(item.row);
+          }
         }
       }
     }

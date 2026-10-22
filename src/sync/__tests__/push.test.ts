@@ -16,6 +16,10 @@ import {
 import { createTestDatabase } from '@/test/testDatabase';
 
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
+const mockCapture = jest.fn();
+jest.mock('@/lib/captureError', () => ({
+  captureError: (...args: unknown[]) => mockCapture(...args),
+}));
 jest.mock('expo-crypto', () => ({
   randomUUID: () => jest.requireActual<typeof import('node:crypto')>('node:crypto').randomUUID(),
 }));
@@ -52,6 +56,7 @@ let db: Database;
 let close: () => void;
 
 beforeEach(() => {
+  mockCapture.mockReset();
   ({ db, close } = createTestDatabase());
 });
 
@@ -232,6 +237,34 @@ describe('classifyErrorCode', () => {
     ['57014', 'transient'],
   ])('%s → %s', (code, kind) => {
     expect(classifyErrorCode(code)).toBe(kind);
+  });
+});
+
+describe('suivi Sentry', () => {
+  it('un seul événement par push, regroupé par table et raison, sans valeur saisie', async () => {
+    addPerson('Invalide');
+    addPerson('Invalide 2');
+    addPerson('A');
+    const upsert: UpsertRows = async (_tableName, rows) => {
+      if (rows.some((r) => String(r.name).startsWith('Invalide'))) {
+        throw new PushError('Envoi impossible (debt_people, 23514)', 'rejected');
+      }
+    };
+    await expect(pushAll(db, USER, upsert)).resolves.toEqual({ sent: 1, rejected: 2 });
+    expect(mockCapture).toHaveBeenCalledTimes(1);
+    const [, options] = mockCapture.mock.calls[0];
+    expect(options).toEqual({
+      scope: 'sync',
+      reason: 'push-rejected',
+      context: { rejected: 2, 'debt_people upsert : Envoi impossible (debt_people, 23514)': 2 },
+    });
+    expect(JSON.stringify(mockCapture.mock.calls)).not.toContain('Invalide');
+  });
+
+  it('aucun événement sans refus', async () => {
+    addPerson('A');
+    await pushAll(db, USER, fakeUpsert().upsert);
+    expect(mockCapture).not.toHaveBeenCalled();
   });
 });
 

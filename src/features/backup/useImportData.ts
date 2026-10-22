@@ -4,6 +4,7 @@ import { summarizeBackup, type Backup, type BackupSummary } from '@/backup/forma
 import { useDatabase } from '@/db/DatabaseProvider';
 import { useUserId } from '@/features/auth/AuthProvider';
 import { useInitialPull } from '@/features/sync/useInitialPull';
+import { captureError } from '@/lib/captureError';
 import { showToast } from '@/lib/toast';
 import { importBackup } from '@/repositories/backup';
 
@@ -53,6 +54,7 @@ export function useImportData(): ImportData {
       }
     } catch (e) {
       console.error('[backup] lecture du fichier impossible', e);
+      captureError(e, { scope: 'backup', reason: 'read-file' });
       setPickError('Impossible de lire ce fichier.');
     } finally {
       inFlight.current = false;
@@ -70,6 +72,7 @@ export function useImportData(): ImportData {
       showToast({ message: 'Import terminé', variant: 'info' });
     } catch (e) {
       console.error('[backup] import impossible', e);
+      captureError(e, { scope: 'backup', reason: 'import' });
       setImportError('L’import a échoué. Aucune donnée n’a été modifiée.');
     } finally {
       inFlight.current = false;

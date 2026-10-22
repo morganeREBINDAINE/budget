@@ -4,6 +4,7 @@ import * as TaskManager from 'expo-task-manager';
 import { prepareDatabase, type Database } from '@/db/client';
 import { runMigrations } from '@/db/migrate';
 import { loadLocalAccount, type LocalAccount } from '@/features/auth/localAccount';
+import { captureError } from '@/lib/captureError';
 import { getInitialPullStatus, hasPulledOnce } from '@/sync/initialPull';
 import { requestSync, type SyncResult } from '@/sync/syncNow';
 
@@ -64,6 +65,7 @@ export async function runBackgroundSync(
     return result.ok ? 'synced' : 'failed';
   } catch (e) {
     console.error('[sync] tâche de fond impossible', e);
+    captureError(e, { scope: 'sync', reason: 'background-task' });
     return 'failed';
   }
 }
@@ -102,6 +104,7 @@ export function registerBackgroundSync(): Promise<void> {
       });
     } catch (e) {
       console.error('[sync] enregistrement de la tâche de fond impossible', e);
+      captureError(e, { scope: 'sync', reason: 'background-register' });
     }
   });
 }
@@ -113,6 +116,7 @@ export function unregisterBackgroundSync(): Promise<void> {
       await BackgroundTask.unregisterTaskAsync(BACKGROUND_SYNC_TASK);
     } catch (e) {
       console.error('[sync] retrait de la tâche de fond impossible', e);
+      captureError(e, { scope: 'sync', reason: 'background-unregister' });
     }
   });
 }

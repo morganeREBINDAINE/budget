@@ -1,4 +1,5 @@
 import type { Database } from '@/db/client';
+import { captureError } from '@/lib/captureError';
 import { reportError } from '@/lib/errors';
 import { hasLocalCategories } from '@/repositories/remoteRows';
 import { getSetting } from '@/repositories/settings';
@@ -68,6 +69,7 @@ async function runInitialPull(db: Database, userId: string): Promise<void> {
   } catch (e) {
     console.error('[sync] pull initial impossible', e);
     const status = e instanceof SessionError ? 'reauth' : 'error';
+    if (status === 'error') captureError(e, { scope: 'sync', reason: 'initial-pull' });
     if (state?.userId === userId) setState({ userId, status });
     return;
   }

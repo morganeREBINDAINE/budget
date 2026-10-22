@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useDatabase } from '@/db/DatabaseProvider';
 import { useUserId } from '@/features/auth/AuthProvider';
 import { useInitialPull } from '@/features/sync/useInitialPull';
+import { captureError } from '@/lib/captureError';
 import { reportError } from '@/lib/errors';
 
 import { exportBackup, SharingUnavailableError } from './exportBackup';
@@ -45,6 +46,9 @@ export function useExportData({ errorDisplay }: { errorDisplay: ErrorDisplay }):
       await exportBackup(db, userId);
     } catch (e) {
       const message = errorMessage(e);
+      if (!(e instanceof SharingUnavailableError)) {
+        captureError(e, { scope: 'backup', reason: 'export' });
+      }
       if (errorDisplay === 'toast') {
         reportError({ scope: 'backup', message, error: e });
       } else {

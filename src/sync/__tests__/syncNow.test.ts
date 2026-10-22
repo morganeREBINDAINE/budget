@@ -8,6 +8,10 @@ import { createTestDatabase } from '@/test/testDatabase';
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 jest.mock('@/lib/network', () => ({ isOnline: jest.fn() }));
 jest.mock('@/lib/errors', () => ({ reportError: jest.fn() }));
+const mockCapture = jest.fn();
+jest.mock('@/lib/captureError', () => ({
+  captureError: (...args: unknown[]) => mockCapture(...args),
+}));
 
 const report = jest.mocked(reportError);
 
@@ -39,6 +43,7 @@ beforeEach(() => {
   });
   ({ db, close } = createTestDatabase());
   report.mockReset();
+  mockCapture.mockReset();
   jest.spyOn(console, 'error').mockImplementation(() => undefined);
 });
 
@@ -86,6 +91,7 @@ describe('syncNow', () => {
       reason: 'offline',
     });
     expect(d.push).not.toHaveBeenCalled();
+    expect(mockCapture).not.toHaveBeenCalled();
     expect(store.getSyncRunState(USER)).toMatchObject({
       running: false,
       error: store.OFFLINE_MESSAGE,
@@ -107,6 +113,11 @@ describe('syncNow', () => {
       error: store.FAILED_MESSAGE,
     });
     expect(getSetting(db, USER, 'last_synced_at')).toBeNull();
+    expect(mockCapture).toHaveBeenCalledWith(expect.any(Error), {
+      scope: 'sync',
+      reason: 'sync',
+      context: { background: false },
+    });
   });
 
   it('requête restée sans réponse : message dédié et relance programmée', async () => {
@@ -129,6 +140,8 @@ describe('syncNow', () => {
       error: store.TIMEOUT_MESSAGE,
       nextRetryAt: expect.any(String),
     });
+    // Délai dépassé : non envoyé à Sentry.
+    expect(mockCapture).not.toHaveBeenCalled();
 
     // Échec suivant sans annulation : message habituel.
     jest.mocked(d.push).mockRejectedValueOnce(new Error('503'));
@@ -268,6 +281,7 @@ describe('relances automatiques', () => {
       nextRetryAt: null,
     });
     expect(jest.getTimerCount()).toBe(0);
+    expect(mockCapture).not.toHaveBeenCalled();
   });
 
   it('une nouvelle synchro remet sessionRefused à faux', async () => {

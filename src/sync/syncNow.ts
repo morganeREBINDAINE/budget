@@ -1,4 +1,5 @@
 import type { Database } from '@/db/client';
+import { captureError } from '@/lib/captureError';
 import { reportError } from '@/lib/errors';
 import { getRequestTimeoutCount } from '@/lib/fetchWithTimeout';
 import { isOnline } from '@/lib/network';
@@ -263,6 +264,8 @@ async function runSync(
       return { ok: false, reason: 'session' };
     }
     const timedOut = deps.requestTimeouts() > timeoutsBefore;
+    // Délai dépassé (réseau lent) : pas un bug, non envoyé à Sentry.
+    if (!timedOut) captureError(e, { scope: 'sync', reason: 'sync', context: { background } });
     patchState(userId, { running: false, error: timedOut ? TIMEOUT_MESSAGE : FAILED_MESSAGE });
     if (!background) scheduleRetry(db, userId, deps);
     return { ok: false, reason: 'failed' };
