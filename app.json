@@ -3,6 +3,9 @@
     "name": "Budget",
     "slug": "budget",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "budget",
@@ -57,6 +60,9 @@
         "projectId": "da3806c0-b77a-4511-82bf-7591e004f9ee"
       }
     },
-    "owner": "mrebindaine"
+    "owner": "mrebindaine",
+    "updates": {
+      "url": "https://u.expo.dev/da3806c0-b77a-4511-82bf-7591e004f9ee"
+    }
   }
 }

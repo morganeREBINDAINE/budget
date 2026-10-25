@@ -34,6 +34,7 @@
     "expo-symbols": "~57.0.3",
     "expo-system-ui": "~57.0.4",
     "expo-task-manager": "~57.0.21",
+    "expo-updates": "~57.0.26",
     "expo-web-browser": "~57.0.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -67,6 +68,7 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
+    "update:prod": "node scripts/update-production.mjs",
     "lint": "expo lint",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
