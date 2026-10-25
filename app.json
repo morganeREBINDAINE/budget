@@ -10,9 +10,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "budget",
     "userInterfaceStyle": "light",
-    "ios": {
-      "icon": "./assets/expo.icon"
-    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
