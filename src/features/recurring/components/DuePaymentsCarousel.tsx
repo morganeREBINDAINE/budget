@@ -17,6 +17,8 @@ type Props = {
   // Échéances dues, de la plus ancienne à la plus récente.
   dues: DuePayment[];
   onPay: (due: DuePayment) => void;
+  // Vue « Voir en euro » de l'accueil : montants en euros arrondis à ce taux ; null : dinars.
+  eurRate?: number | null;
 };
 
 const DOT_SIZE = 6;
@@ -27,7 +29,11 @@ const keyOf = (d: DuePayment) => `${d.payment.id}-${d.dueDate}`;
 
 // Encart unique des échéances dues : une échéance par page, défilement horizontal (virtualisé,
 // le nombre d'échéances en retard peut grandir), indicateur de page sous l'encart.
-export const DuePaymentsCarousel = memo(function DuePaymentsCarousel({ dues, onPay }: Props) {
+export const DuePaymentsCarousel = memo(function DuePaymentsCarousel({
+  dues,
+  onPay,
+  eurRate = null,
+}: Props) {
   const { spacing } = useTheme();
   const { width: windowWidth } = useWindowDimensions();
   const pageWidth = windowWidth - screenPadding * 2;
@@ -38,10 +44,10 @@ export const DuePaymentsCarousel = memo(function DuePaymentsCarousel({ dues, onP
   const renderItem: ListRenderItem<DuePayment> = useCallback(
     ({ item }) => (
       <Stack style={{ width: pageWidth }}>
-        <DuePaymentBanner due={item} onPay={onPay} />
+        <DuePaymentBanner due={item} onPay={onPay} eurRate={eurRate} />
       </Stack>
     ),
-    [pageWidth, onPay],
+    [pageWidth, onPay, eurRate],
   );
 
   const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) =>

@@ -4,7 +4,8 @@ import { Row, Stack, Text, useTheme } from '@/design-system';
 import { formatAmount, formatShortDate } from '@/lib/format';
 import type { Transaction } from '@/types/budget';
 
-type Props = { expenses: Transaction[] };
+// `eurRate` : montants en euros arrondis à ce taux (vue « Voir en euro »).
+type Props = { expenses: Transaction[]; eurRate?: number | null };
 
 // Lignes affichées au plus (le reste est résumé) : la liste n'est pas virtualisée.
 const MAX_VISIBLE = 10;
@@ -16,7 +17,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
  * (données incohérentes). Comptées dans le total des dépenses, absentes du graphique.
  * Volontairement non masquable : sert au diagnostic.
  */
-export function OrphanExpensesNotice({ expenses }: Props) {
+export function OrphanExpensesNotice({ expenses, eurRate = null }: Props) {
   const { colors, spacing } = useTheme();
   const visible = expenses.slice(0, MAX_VISIBLE);
   const hidden = expenses.length - visible.length;
@@ -56,7 +57,7 @@ export function OrphanExpensesNotice({ expenses }: Props) {
                 {t.note ?? 'Sans note'}
               </Text>
               <Text variant="bodySmall" weight="bold" tabular>
-                {formatAmount(t.amountDa)}
+                {formatAmount(t.amountDa, { eurRate })}
               </Text>
             </Row>
             <Text variant="caption" color="textMuted" numberOfLines={1} selectable>

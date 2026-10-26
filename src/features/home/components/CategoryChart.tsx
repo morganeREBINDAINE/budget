@@ -3,12 +3,13 @@ import { type LayoutChangeEvent, Pressable } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { Box, Card, Row, Stack, Text, useTheme } from '@/design-system';
-import { formatNumber } from '@/lib/format';
+import { displayAmount, formatNumber } from '@/lib/format';
 import type { CategoryTotal } from '@/lib/budget';
 
 // `totalDa` : total affiché au centre (toutes les dépenses du mois, y compris celles sans
 // catégorie valide) ; les pourcentages portent sur la somme des segments.
-type Props = { totals: CategoryTotal[]; totalDa: number };
+// `eurRate` : total affiché en euros arrondis à ce taux (vue « Voir en euro »).
+type Props = { totals: CategoryTotal[]; totalDa: number; eurRate?: number | null };
 
 const MAX_SIZE = 340;
 const STROKE = 30;
@@ -43,7 +44,7 @@ function roundedArc(cx: number, cy: number, r: number, a0: number, a1: number): 
 
 // Anneau des dépenses par catégorie, % autour de l'anneau, légende couleur + nom.
 // Les segments suivent l'ordre des catégories (position), donc l'ordre de l'arc-en-ciel.
-export function CategoryChart({ totals, totalDa }: Props) {
+export function CategoryChart({ totals, totalDa, eurRate = null }: Props) {
   const { colors, spacing } = useTheme();
   const [width, setWidth] = useState(0);
   // Catégorie sous le doigt : surbrillance uniquement pendant l'appui.
@@ -58,6 +59,7 @@ export function CategoryChart({ totals, totalDa }: Props) {
     .filter((t) => t.amountDa > 0)
     .sort((a, b) => a.category.position - b.category.position);
 
+  const total = displayAmount(totalDa, eurRate);
   const size = Math.min(width, MAX_SIZE);
   const r = size / 2 - LABEL_SPACE - STROKE / 2;
   const center = size / 2;
@@ -137,10 +139,10 @@ export function CategoryChart({ totals, totalDa }: Props) {
               </Text>
               <Row align="baseline" gap="xs">
                 <Text variant="display" tabular>
-                  {formatNumber(totalDa)}
+                  {formatNumber(total.value)}
                 </Text>
                 <Text variant="body" weight="bold" color="textMuted">
-                  DA
+                  {total.unit}
                 </Text>
               </Row>
             </Stack>

@@ -27,6 +27,10 @@ export type PeriodPageProps = {
   onPayDue: (due: DuePayment) => void;
   onOpenTransaction: (id: string) => void;
   onDeleteTransaction: (transaction: Transaction) => void;
+  // Vue « Voir en euro » : montants en euros arrondis à ce taux (DA / €) ; absent ou null : dinars.
+  eurRate?: number | null;
+  // Bouton « Voir en euro » / « Revenir en dinars » du bilan ; absent : pas de bouton (vue à l'année).
+  onToggleEur?: () => void;
 };
 
 type ContentProps = Omit<PeriodPageProps, 'categories'> & { view: HomeView; summary: MonthSummary };
@@ -49,6 +53,8 @@ export function PeriodContent({
   onPayDue,
   onOpenTransaction,
   onDeleteTransaction,
+  eurRate = null,
+  onToggleEur,
 }: ContentProps) {
   const { spacing } = useTheme();
   const labels = periodLabels(view, month);
@@ -60,21 +66,29 @@ export function PeriodContent({
         category={item.categoryId ? summary.categoriesById.get(item.categoryId) : undefined}
         onPress={onOpenTransaction}
         onLongPress={onDeleteTransaction}
+        eurRate={eurRate}
       />
     ),
-    [summary.categoriesById, onOpenTransaction, onDeleteTransaction],
+    [summary.categoriesById, onOpenTransaction, onDeleteTransaction, eurRate],
   );
 
   const header = (
     <Stack gap="xl" style={{ marginBottom: spacing.lg }}>
       {summary.byCategory.length > 0 && (
-        <CategoryChart totals={summary.byCategory} totalDa={summary.expenseDa} />
+        <CategoryChart totals={summary.byCategory} totalDa={summary.expenseDa} eurRate={eurRate} />
       )}
       {summary.orphanExpenses.length > 0 && (
-        <OrphanExpensesNotice expenses={summary.orphanExpenses} />
+        <OrphanExpensesNotice expenses={summary.orphanExpenses} eurRate={eurRate} />
       )}
-      {duePayments.length > 0 && <DuePaymentsCarousel dues={duePayments} onPay={onPayDue} />}
-      <MonthBalanceCard amounts={summary} label={labels.balance} />
+      {duePayments.length > 0 && (
+        <DuePaymentsCarousel dues={duePayments} onPay={onPayDue} eurRate={eurRate} />
+      )}
+      <MonthBalanceCard
+        amounts={summary}
+        label={labels.balance}
+        eurRate={eurRate}
+        onToggleEur={onToggleEur}
+      />
       <Row gap="sm" align="baseline">
         <Text variant="title">Détail</Text>
         <Text variant="body" color="textMuted">

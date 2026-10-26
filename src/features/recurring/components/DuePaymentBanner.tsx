@@ -8,14 +8,21 @@ import type { DuePayment } from '@/types/budget';
 type Props = {
   due: DuePayment;
   onPay: (due: DuePayment) => void;
+  // Vue « Voir en euro » de l'accueil : montant en euros arrondis à ce taux ; null : dinars.
+  eurRate?: number | null;
 };
 
 const ICON_TILE = 40;
 
 // Encart rouge d'une échéance arrivée et non payée (reste affiché jusqu'à « J'ai payé »).
-export const DuePaymentBanner = memo(function DuePaymentBanner({ due, onPay }: Props) {
+export const DuePaymentBanner = memo(function DuePaymentBanner({
+  due,
+  onPay,
+  eurRate = null,
+}: Props) {
   const { colors, radius } = useTheme();
   const late = daysBetween(due.dueDate, toIsoDate(new Date()));
+  const amount = formatAmount(due.payment.amountDa, { eurRate });
   const when =
     late > 0
       ? `Échéance du ${formatLongDate(due.dueDate)} · ${formatLateness(late)}`
@@ -29,7 +36,7 @@ export const DuePaymentBanner = memo(function DuePaymentBanner({ due, onPay }: P
       gap="md"
       shadow="sm"
       accessibilityRole="alert"
-      accessibilityLabel={`${due.payment.name}, ${formatAmount(due.payment.amountDa)}, ${when}`}
+      accessibilityLabel={`${due.payment.name}, ${amount}, ${when}`}
     >
       <Row gap="md">
         <Stack
@@ -50,7 +57,7 @@ export const DuePaymentBanner = memo(function DuePaymentBanner({ due, onPay }: P
               {due.payment.name}
             </Text>
             <Text variant="heading" weight="extrabold" color="textOnColor" tabular>
-              {formatAmount(due.payment.amountDa)}
+              {amount}
             </Text>
           </Row>
           <Text variant="bodySmall" weight="semibold" color="textOnColor">

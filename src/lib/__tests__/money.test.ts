@@ -1,5 +1,6 @@
 import {
   amountToInput,
+  daToEur,
   editAmountInput,
   eurCentsToDa,
   formatAmountInput,
@@ -50,6 +51,20 @@ describe('eurCentsToDa', () => {
     expect(eurCentsToDa(1, 250)).toBe(3); // 2,5 → 3
     expect(eurCentsToDa(1, 249)).toBe(2); // 2,49 → 2
     expect(eurCentsToDa(1999, 250.5)).toBe(5007); // 5007,495 → 5007
+  });
+});
+
+describe('daToEur', () => {
+  it("arrondit à l'euro le plus proche", () => {
+    expect(daToEur(25_000, 250)).toBe(100);
+    expect(daToEur(625, 250)).toBe(3); // 2,5 → 3
+    expect(daToEur(1_249, 250)).toBe(5); // 4,996 → 5
+    expect(daToEur(100, 250)).toBe(0); // 0,4 → 0
+  });
+
+  it('arrondit les montants négatifs comme les positifs', () => {
+    expect(daToEur(-625, 250)).toBe(-3);
+    expect(daToEur(-1_249, 250.5)).toBe(-5);
   });
 });
 

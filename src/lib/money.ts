@@ -31,6 +31,12 @@ export function eurCentsToDa(cents: number, rate: number): number {
   return Math.round((cents * rate) / 100);
 }
 
+// DA → euros entiers au taux donné (affichage indicatif « Voir en euro »), arrondi symétrique
+// autour de 0 : −2,5 € → −3 € comme 2,5 € → 3 €.
+export function daToEur(amountDa: number, rate: number): number {
+  return Math.sign(amountDa) * Math.round(Math.abs(amountDa) / rate);
+}
+
 // Nombre → saisie française ("12.5" → "12,5").
 export const toDecimalInput = (n: number) => String(n).replace('.', ',');
 

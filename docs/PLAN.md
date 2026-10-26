@@ -320,6 +320,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 
 - [x] Saisie des montants groupée par 3 chiffres pendant la frappe (« 10 000 », « 12 500,50 ») : champ Montant des transactions, dettes, remboursements et paiements réguliers (`AmountInput`), en DA et en € (partie entière seulement, `.` remplacé par `,`), espace insécable comme à l'affichage ; valeurs pré-remplies et bouton « Tout » formatés ; curseur gardé à sa place, effacer un espace efface le chiffre qui le précède ; saisie invalide laissée telle quelle (erreur à la validation). Taux EUR non formaté. `formatAmountInput` / `editAmountInput` (`src/lib/money.ts`), testés.
 - [x] Vue à l'année sur l'accueil : bouton œil à droite de l'export (`trailing` de `AppHeader`, logo centré en absolu), menu ancré « Vue par mois » / « Vue à l'année » (`Menu` du design system) ; en vue à l'année, sélecteur de mois remplacé par la pastille fixe « Nov. 2025 – Oct. 2026 » (12 mois finissant au mois affiché), pas de glissement ; anneau, bilan (« Reste sur 12 mois »), encart « paiement dû » et « Détail » (`FlatList` virtualisée, date desc) sur les 12 mois (`yearTransactionsQuery` sur l'index `(user_id, date)`, `useYearSummary`, mêmes totaux que le mois via `summarizeMonth`) ; skeletons au premier chargement, bloc d'erreur si la lecture échoue ; « Vue par mois » ramène au mois d'origine. Choix gardé pendant la session (non mémorisé). Tests : bornes et libellé des 12 mois, requête (bornes, comptes, suppressions).
+- [x] « Voir en euro » sur l'accueil (vue par mois) : bouton blanc pleine largeur en bas du bilan → modale « Taux du jour » (`EurRateDialog`, prérempli avec le dernier taux saisi, jamais mémorisé, erreur sous le champ) ; tout le mois affiché passe en euros arrondis à l'euro (`daToEur`, `formatAmount({ eurRate })`) : bilan (reste = entrées € − dépenses €, mention « Indicatif, au taux de … DA / € »), total de l'anneau, liste « Détail », échéances dues, dépenses sans catégorie ; le bouton devient « Revenir en dinars ». Calcul local, rien n'est enregistré ; état en mémoire dans `HomeScreen`, annulé au changement de mois ou de vue et quand l'accueil quitte l'écran (`useFocusEffect`) ; mois voisins du carrousel en dinars. `ConfirmDialog` remonte au-dessus du clavier. Tests : conversion et formatage en euros.
 
 ## Checklist de recette v1
 
@@ -337,6 +338,7 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [ ] Une erreur provoquée remonte dans Sentry.
 - [ ] Montants saisis groupés par 3 chiffres (DA et €), curseur stable en modifiant au milieu.
 - [ ] Vue à l'année : totaux, graphique et liste des 12 mois justes ; retour à la vue par mois sur le même mois.
+- [ ] « Voir en euro » : taux prérempli, montants du mois en euros entiers, retour en dinars au changement de mois, de vue ou d'écran ; modale visible au-dessus du clavier.
 
 ---
 

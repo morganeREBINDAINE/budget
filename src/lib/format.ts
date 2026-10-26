@@ -1,3 +1,5 @@
+import { daToEur } from '@/lib/money';
+
 const MONTHS = [
   'janvier',
   'février',
@@ -22,10 +24,27 @@ export function formatNumber(value: number): string {
     .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
-// 12500 → "12 500 DA" ; signed : "+12 500 DA" / "−12 500 DA".
-export function formatAmount(value: number, options: { signed?: boolean } = {}): string {
-  const sign = options.signed ? (value < 0 ? '−' : '+') : value < 0 ? '−' : '';
-  return `${sign}${formatNumber(value)} DA`;
+/**
+ * Montant en DA → valeur et unité affichées : dinars, ou euros entiers au taux `eurRate` (DA / €)
+ * si la vue « Voir en euro » de l'accueil est active.
+ */
+export function displayAmount(
+  amountDa: number,
+  eurRate: number | null = null,
+): { value: number; unit: 'DA' | '€' } {
+  return eurRate === null
+    ? { value: amountDa, unit: 'DA' }
+    : { value: daToEur(amountDa, eurRate), unit: '€' };
+}
+
+// 12500 → "12 500 DA" ; signed : "+12 500 DA" / "−12 500 DA" ; eurRate : "50 €" (`displayAmount`).
+export function formatAmount(
+  amountDa: number,
+  options: { signed?: boolean; eurRate?: number | null } = {},
+): string {
+  const { value, unit } = displayAmount(amountDa, options.eurRate);
+  const sign = value < 0 ? '−' : options.signed && value !== 0 ? '+' : '';
+  return `${sign}${formatNumber(value)} ${unit}`;
 }
 
 export type YearMonth = { year: number; month: number }; // month : 1–12

@@ -107,6 +107,7 @@ Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, 
 - Modale centrée sur un fond assombri, carte blanche `radius.xl`, titre + message, bouton de confirmation et « Annuler » (`ghost`).
 - Props : `visible`, `title`, `message`, `confirmLabel` (défaut « Confirmer »), `cancelLabel` (défaut « Annuler »), `variant` (`primary` → bouton noir, `danger` → bouton rouge), `onConfirm` (`() => void | Promise`), `onCancel`, `error` (message rouge géré par l'appelant), `children` (contenu additionnel, ex. un champ date).
 - Si `onConfirm` renvoie une Promise : spinner dans le bouton, garde contre les doubles appuis, fermeture (Annuler, fond, retour Android) bloquée jusqu'à la résolution. L'appelant ferme la modale (`visible=false`) en cas de succès.
+- Remonte au-dessus du clavier (`KeyboardAvoidingView` de react-native-keyboard-controller) : un champ (`Input`) peut être passé en `children` sans `FormScrollView`.
 
 ### ScreenHeader
 

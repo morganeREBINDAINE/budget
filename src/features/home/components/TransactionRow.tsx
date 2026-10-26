@@ -13,6 +13,8 @@ type Props = {
   onPress: (id: string) => void;
   // Appui long : demande de suppression (pas de glissement, réservé au changement de mois).
   onLongPress: (transaction: Transaction) => void;
+  // Vue « Voir en euro » : montant en euros arrondis à ce taux ; null : dinars.
+  eurRate?: number | null;
 };
 
 // Ligne de la liste « Détail » : appui → modifier, appui long → supprimer.
@@ -21,6 +23,7 @@ export const TransactionRow = memo(function TransactionRow({
   category,
   onPress,
   onLongPress,
+  eurRate = null,
 }: Props) {
   const { colors, motion } = useTheme();
   const isIncome = transaction.type === 'income';
@@ -73,6 +76,7 @@ export const TransactionRow = memo(function TransactionRow({
             >
               {formatAmount(isIncome ? transaction.amountDa : -transaction.amountDa, {
                 signed: true,
+                eurRate,
               })}
             </Text>
             {transaction.currency === 'EUR' && (

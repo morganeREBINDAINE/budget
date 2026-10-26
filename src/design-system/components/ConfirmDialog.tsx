@@ -1,5 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, StyleSheet } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 import { Stack } from '../primitives/Stack';
 import { Text } from '../primitives/Text';
@@ -26,6 +27,7 @@ export type ConfirmDialogProps = {
 /**
  * Modale de confirmation centrée sur un fond assombri.
  * Fermeture : « Annuler », toucher du fond ou bouton retour Android (sauf pendant la confirmation).
+ * Avec un champ dans `children`, la carte remonte au-dessus du clavier.
  */
 export function ConfirmDialog({
   visible,
@@ -73,7 +75,10 @@ export function ConfirmDialog({
       statusBarTranslucent
       onRequestClose={cancel}
     >
-      <View style={[styles.center, { backgroundColor: colors.backdrop, padding: spacing.xxl }]}>
+      <KeyboardAvoidingView
+        behavior="padding"
+        style={[styles.center, { backgroundColor: colors.backdrop, padding: spacing.xxl }]}
+      >
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={cancel}
@@ -120,7 +125,7 @@ export function ConfirmDialog({
             />
           </Stack>
         </Stack>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
