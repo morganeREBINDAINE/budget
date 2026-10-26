@@ -1,48 +1,76 @@
 // Publie une mise à jour EAS Update sur le canal `production`, puis envoie
-// les source maps du bundle à Sentry (sinon les erreurs de la mise à jour
-// sont illisibles). Usage : npm run update:prod -- "message"
+// les source maps du bundle à Sentry si le projet l'utilise (sinon les erreurs
+// de la mise à jour sont illisibles). Script autonome, réutilisable tel quel
+// dans un autre projet Expo.
+// Usage : npm run update:prod -- "message" [--platform android|ios|all]
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { parseArgs } from 'node:util';
 
-const message = process.argv[2]?.trim();
+const PLATFORMS = ['android', 'ios', 'all'];
+const SENTRY_PLUGINS = ['@sentry/react-native', '@sentry/react-native/expo'];
 
 function fail(text) {
   console.error(`\n✖ ${text}`);
   process.exit(1);
 }
 
+// npx est un .cmd sous Windows : il doit passer par le shell.
+const shell = process.platform === 'win32';
+
 function run(command, args) {
-  // npx est un .cmd sous Windows : il doit passer par le shell.
-  const result = spawnSync(command, args, {
-    stdio: 'inherit',
-    shell: process.platform === 'win32',
-  });
-  return result.status === 0;
+  return spawnSync(command, args, { stdio: 'inherit', shell }).status === 0;
 }
+
+let parsed;
+try {
+  parsed = parseArgs({
+    allowPositionals: true,
+    options: { platform: { type: 'string', default: 'android' } },
+  });
+} catch (error) {
+  fail(error.message);
+}
+const message = parsed.positionals.join(' ').trim();
+const { platform } = parsed.values;
 
 if (!message) fail('Message requis : npm run update:prod -- "description de la mise à jour"');
 if (message.includes('"')) fail('Le message ne doit pas contenir de guillemets doubles.');
+if (!PLATFORMS.includes(platform))
+  fail(`Plateforme inconnue « ${platform} » : ${PLATFORMS.join(', ')}.`);
 
-// Le jeton Sentry vient de `.env` (jamais versionné).
+// Les jetons (Sentry, éventuellement EXPO_TOKEN) viennent de `.env` (jamais versionné).
 if (existsSync('.env')) process.loadEnvFile('.env');
-if (!process.env.SENTRY_AUTH_TOKEN)
-  fail('SENTRY_AUTH_TOKEN absent de .env : source maps impossibles à envoyer.');
-
-// `sentry-expo-upload-sourcemaps` ne lit que le plugin `@sentry/react-native/expo` ; app.json
-// déclare `@sentry/react-native` (le renommer changerait le fingerprint, donc le runtime).
-// Organisation, projet et URL lui sont donc passés par l'environnement.
-const plugins = JSON.parse(readFileSync('app.json', 'utf8')).expo.plugins ?? [];
-const sentry = plugins.find((p) => Array.isArray(p) && p[0] === '@sentry/react-native')?.[1];
-if (!sentry?.organization || !sentry?.project)
-  fail('Plugin @sentry/react-native sans organization ni project dans app.json.');
-process.env.SENTRY_ORG ??= sentry.organization;
-process.env.SENTRY_PROJECT ??= sentry.project;
-if (sentry.url) process.env.SENTRY_URL ??= sentry.url;
 
 // La mise à jour embarque l'arbre de travail : il doit correspondre à un commit.
 const status = spawnSync('git', ['status', '--porcelain'], { encoding: 'utf8' });
 if (status.status !== 0) fail('Impossible de lire l’état git.');
 if (status.stdout.trim()) fail('Modifications non commitées : commit ou stash avant de publier.');
+
+// Config résolue par Expo : couvre app.json comme app.config.js / app.config.ts.
+const config = spawnSync('npx', ['expo', 'config', '--json'], { encoding: 'utf8', shell });
+if (config.status !== 0) fail('Impossible de lire la configuration Expo (npx expo config).');
+let plugins;
+try {
+  plugins = JSON.parse(config.stdout).plugins ?? [];
+} catch {
+  fail('Configuration Expo illisible (sortie de npx expo config non JSON).');
+}
+
+// `sentry-expo-upload-sourcemaps` ne lit que le plugin `@sentry/react-native/expo` ; un projet
+// peut déclarer `@sentry/react-native` (le renommer changerait le fingerprint, donc le runtime).
+// Organisation, projet et URL lui sont donc passés par l'environnement.
+const sentryPlugin = plugins.find((p) => SENTRY_PLUGINS.includes(Array.isArray(p) ? p[0] : p));
+const sentry = Array.isArray(sentryPlugin) ? (sentryPlugin[1] ?? {}) : {};
+if (sentryPlugin) {
+  if (!process.env.SENTRY_AUTH_TOKEN)
+    fail('SENTRY_AUTH_TOKEN absent de .env : source maps impossibles à envoyer.');
+  process.env.SENTRY_ORG ??= sentry.organization;
+  process.env.SENTRY_PROJECT ??= sentry.project;
+  if (sentry.url) process.env.SENTRY_URL ??= sentry.url;
+  if (!process.env.SENTRY_ORG || !process.env.SENTRY_PROJECT)
+    fail('Plugin Sentry sans organization ni project (config Expo ou SENTRY_ORG / SENTRY_PROJECT).');
+}
 
 const published = run('npx', [
   'eas-cli@latest',
@@ -52,12 +80,17 @@ const published = run('npx', [
   '--environment',
   'production',
   '--platform',
-  'android',
+  platform,
   '--message',
-  process.platform === 'win32' ? `"${message}"` : message,
+  shell ? `"${message}"` : message,
   '--non-interactive',
 ]);
 if (!published) fail('Échec de la publication EAS Update.');
+
+if (!sentryPlugin) {
+  console.log('\n✔ Mise à jour publiée (pas de plugin Sentry : source maps non envoyées).');
+  process.exit(0);
+}
 
 if (!run('npx', ['sentry-expo-upload-sourcemaps', 'dist'])) {
   fail(
