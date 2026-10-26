@@ -31,6 +31,7 @@ import { formatAmount, toIsoDate } from '@/lib/format';
 import {
   amountToInput,
   eurCentsToDa,
+  formatAmountInput,
   parseDecimal,
   parseEurCents,
   toDecimalInput,
@@ -143,7 +144,7 @@ export function RepaymentForm({ debt, personName = 'cette personne', repaidDa, r
 
   const fillRemaining = () => {
     setCurrency('DZD');
-    setAmount(String(maxDa));
+    setAmount(formatAmountInput(String(maxDa)));
     clearError('amount');
   };
 

@@ -316,6 +316,11 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [ ] Google Cloud : client OAuth Android avec la SHA-1 de la clé Play App Signing (Play Console → Intégrité de l'application), sinon `DEVELOPER_ERROR` dans l'app installée depuis le Play Store. Rien à changer côté Supabase.
 - [ ] Installer l'APK sur le téléphone et passer la checklist de recette.
 
+## Phase 10 — Évolutions
+
+- [x] Saisie des montants groupée par 3 chiffres pendant la frappe (« 10 000 », « 12 500,50 ») : champ Montant des transactions, dettes, remboursements et paiements réguliers (`AmountInput`), en DA et en € (partie entière seulement, `.` remplacé par `,`), espace insécable comme à l'affichage ; valeurs pré-remplies et bouton « Tout » formatés ; curseur gardé à sa place, effacer un espace efface le chiffre qui le précède ; saisie invalide laissée telle quelle (erreur à la validation). Taux EUR non formaté. `formatAmountInput` / `editAmountInput` (`src/lib/money.ts`), testés.
+- [ ] Vue à l'année sur l'accueil : bouton œil à droite de l'export (menu « Vue par mois » / « Vue à l'année ») ; en vue à l'année, sélecteur de mois remplacé par la période fixe (12 mois finissant au mois affiché), pas de glissement ; anneau, bilan, encart « paiement dû » et « Détail » (virtualisé) sur les 12 mois ; « Vue par mois » ramène au mois d'origine. Choix gardé pendant la session.
+
 ## Checklist de recette v1
 
 - [ ] Première connexion Google, puis redémarrage en mode avion → toujours connecté.
@@ -330,6 +335,8 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [ ] Export JSON → import → données identiques.
 - [ ] Paiement régulier : encart rouge le jour J, toujours visible les jours suivants, disparition après « J'ai payé » + confirmation, dépense créée dans le bon mois.
 - [ ] Une erreur provoquée remonte dans Sentry.
+- [ ] Montants saisis groupés par 3 chiffres (DA et €), curseur stable en modifiant au milieu.
+- [ ] Vue à l'année : totaux, graphique et liste des 12 mois justes ; retour à la vue par mois sur le même mois.
 
 ---
 

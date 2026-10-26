@@ -34,6 +34,58 @@ export function eurCentsToDa(cents: number, rate: number): number {
 // Nombre → saisie française ("12.5" → "12,5").
 export const toDecimalInput = (n: number) => String(n).replace('.', ',');
 
+// Séparateur des milliers des champs montant : espace insécable, comme `formatNumber`.
+const GROUP_SEPARATOR = ' ';
+const stripSpaces = (s: string) => s.replace(/\s/g, '');
+
+/**
+ * Saisie de montant → chiffres groupés par 3, virgule décimale ("10000.5" → "10 000,5").
+ * Une saisie qui n'a pas la forme d'un nombre est renvoyée telle quelle (erreur à la validation).
+ */
+export function formatAmountInput(input: string): string {
+  const match = /^(\d*)(?:[.,](\d*))?$/.exec(stripSpaces(input));
+  if (!match) return input;
+  const [, integer, decimals] = match;
+  const grouped = integer.replace(/\B(?=(\d{3})+(?!\d))/g, GROUP_SEPARATOR);
+  return decimals === undefined ? grouped : `${grouped},${decimals}`;
+}
+
+// Position dans `formatted` qui suit le même nombre de caractères (hors espaces) que `caret` dans `raw`.
+function caretAfterFormat(raw: string, caret: number, formatted: string): number {
+  const before = stripSpaces(raw.slice(0, caret)).length;
+  let seen = 0;
+  for (let i = 0; i < formatted.length; i++) {
+    if (seen === before) return i;
+    if (!/\s/.test(formatted[i])) seen++;
+  }
+  return formatted.length;
+}
+
+/**
+ * Modification d'un champ montant : `previous` → `next` (texte natif), `selectionEnd` = fin de la
+ * sélection avant la frappe. Renvoie le texte formaté et la position du curseur à garder.
+ * Effacer un espace de groupement efface le chiffre qui le précède.
+ */
+export function editAmountInput(
+  previous: string,
+  next: string,
+  selectionEnd: number,
+): { text: string; caret: number } {
+  // Saisie ou effacement au curseur : il avance (ou recule) de la différence de longueur.
+  let caret = Math.min(Math.max(0, selectionEnd + next.length - previous.length), next.length);
+  let raw = next;
+  if (
+    next.length === previous.length - 1 &&
+    caret > 0 &&
+    stripSpaces(next) === stripSpaces(previous)
+  ) {
+    raw = next.slice(0, caret - 1) + next.slice(caret);
+    caret -= 1;
+  }
+  const text = formatAmountInput(raw);
+  return { text, caret: caretAfterFormat(raw, caret, text) };
+}
+
 /** Partie « montant » enregistrée (transactions, dettes, remboursements). */
 export type StoredAmount = {
   amountDa: number;
@@ -47,8 +99,8 @@ export function amountToInput(
   a: Pick<StoredAmount, 'amountDa' | 'currency' | 'originalAmountCents'>,
 ): string {
   if (a.currency === 'EUR' && a.originalAmountCents !== null)
-    return toDecimalInput(a.originalAmountCents / 100);
-  return String(a.amountDa);
+    return formatAmountInput(toDecimalInput(a.originalAmountCents / 100));
+  return formatAmountInput(String(a.amountDa));
 }
 
 export type AmountErrors = Partial<Record<'amount' | 'rate', string>>;

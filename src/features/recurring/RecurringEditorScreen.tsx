@@ -28,6 +28,7 @@ import { useInitialPull } from '@/features/sync/useInitialPull';
 import { AmountInput } from '@/features/transaction/components/AmountInput';
 import { CategoryGrid } from '@/features/transaction/components/CategoryGrid';
 import { toIsoDate } from '@/lib/format';
+import { formatAmountInput } from '@/lib/money';
 import {
   isRecurringUnchanged,
   RECURRING_NAME_MAX_LENGTH,
@@ -165,7 +166,7 @@ function RecurringForm({
   const now = new Date();
   const today = toIsoDate(now);
   const [name, setName] = useState(payment?.name ?? '');
-  const [amount, setAmount] = useState(payment ? String(payment.amountDa) : '');
+  const [amount, setAmount] = useState(payment ? formatAmountInput(String(payment.amountDa)) : '');
   const [categoryId, setCategoryId] = useState<string | null>(payment?.categoryId ?? null);
   const [frequency, setFrequency] = useState<RecurringFrequency>(payment?.frequency ?? 'monthly');
   const [day, setDay] = useState<number | null>(payment?.dayOfMonth ?? now.getDate());
