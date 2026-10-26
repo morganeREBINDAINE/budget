@@ -60,7 +60,7 @@ const REPLACED_TABLES = [
   'debt_repayments',
 ] as const satisfies readonly SoftDeletableTableName[];
 
-/** Catégories locales incomplètes : l'import ne peut pas reprendre les 9 positions. */
+/** Catégories locales incomplètes : l'import ne peut pas reprendre les 12 positions. */
 export class MissingCategoriesError extends Error {
   constructor() {
     super('Catégories locales incomplètes');
@@ -88,7 +88,7 @@ function copyRow<T extends SyncedTableName>(
  * Remplace toutes les données du compte `userId` par celles de la sauvegarde (déjà validée), dans
  * une seule transaction : en cas d'erreur, rien n'est modifié. Les lignes actuelles sont supprimées
  * (logiquement, définitivement pour les personnes), puis toutes les lignes du fichier sont recréées
- * avec de nouveaux ids et leurs références converties ; les 9 catégories existantes prennent le nom,
+ * avec de nouveaux ids et leurs références converties ; les 12 catégories existantes prennent le nom,
  * la couleur et l'icône de la catégorie de même position. Tout part dans la file de synchro.
  */
 export function importBackup(db: Database, userId: string, backup: Backup): void {

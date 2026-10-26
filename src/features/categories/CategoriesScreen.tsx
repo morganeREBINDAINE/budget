@@ -17,15 +17,13 @@ import {
 import { InitialPullError } from '@/features/sync/components/InitialPullError';
 import { LoadingRegion } from '@/features/sync/components/Skeletons';
 import { useInitialPull } from '@/features/sync/useInitialPull';
+import { CATEGORY_COUNT } from '@/lib/categories';
 
 import { CategoriesReadError } from './components/CategoriesReadError';
 import { CategoryIcon } from './components/CategoryIcon';
 import { useCategories } from './useCategories';
 
-// Nombre fixe de catégories (v1).
-const CATEGORY_COUNT = 9;
-
-// Liste des 9 catégories (nombre fixe : pas de virtualisation).
+// Liste des 12 catégories (nombre fixe : pas de virtualisation).
 export function CategoriesScreen() {
   const { colors, spacing } = useTheme();
   const { ready, failed } = useInitialPull();

@@ -19,6 +19,7 @@ import { useUserId } from '@/features/auth/AuthProvider';
 import { CategoriesReadError } from '@/features/categories/components/CategoriesReadError';
 import { useCategories } from '@/features/categories/useCategories';
 import { LoadingRegion } from '@/features/sync/components/Skeletons';
+import { CATEGORY_COUNT } from '@/lib/categories';
 import { toIsoDate } from '@/lib/format';
 import {
   amountToInput,
@@ -49,7 +50,6 @@ type Props = { mode: 'new'; type: TransactionType } | { mode: 'edit'; transactio
 type Errors = TransactionErrors & { submit?: string };
 
 const GRID_COLUMNS = 3;
-const GRID_SIZE = 9;
 
 // Formulaire d'ajout / modification d'une entrée ou d'une dépense (feuille aux 2/3).
 // Initialisé une seule fois : une mise à jour reçue pendant la saisie (synchro) ne l'écrase pas.
@@ -272,7 +272,7 @@ export function TransactionForm(props: Props) {
   );
 }
 
-// Grille 3×3 pendant la lecture des catégories (libellé fixe, tuiles remplacées).
+// Grille 3×4 pendant la lecture des catégories (libellé fixe, tuiles remplacées).
 function CategoryGridSkeleton() {
   const { spacing } = useTheme();
   return (
@@ -282,7 +282,7 @@ function CategoryGridSkeleton() {
       </Text>
       <LoadingRegion>
         <Row wrap style={{ marginHorizontal: -spacing.xs }}>
-          {Array.from({ length: GRID_SIZE }, (_, i) => (
+          {Array.from({ length: CATEGORY_COUNT }, (_, i) => (
             <Stack key={i} style={{ width: `${100 / GRID_COLUMNS}%`, padding: spacing.xs }}>
               <Skeleton radius="lg" style={{ aspectRatio: 1, height: undefined }} />
             </Stack>

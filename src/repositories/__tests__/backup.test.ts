@@ -11,6 +11,7 @@ import {
   syncQueue,
   transactions,
 } from '@/db/schema';
+import { CATEGORY_COUNT } from '@/lib/categories';
 import { importBackup, MissingCategoriesError, readBackup } from '@/repositories/backup';
 import { insertRow } from '@/repositories/write';
 import { createTestDatabase } from '@/test/testDatabase';
@@ -35,9 +36,9 @@ afterEach(() => {
   close();
 });
 
-/** 9 catégories, une transaction de chaque type, un paiement payé, une dette remboursée. */
+/** 12 catégories, une transaction de chaque type, un paiement payé, une dette remboursée. */
 function seed(userId: string, label: string) {
-  const cats = Array.from({ length: 9 }, (_, i) =>
+  const cats = Array.from({ length: CATEGORY_COUNT }, (_, i) =>
     insertRow(db, 'categories', userId, {
       name: `${label} ${i + 1}`,
       color: '#EF4444',
@@ -169,8 +170,8 @@ describe('importBackup', () => {
     // Tout part dans la file : suppressions, catégories modifiées et nouvelles lignes.
     const entries = db.select().from(syncQueue).where(eq(syncQueue.userId, USER)).all();
     expect(entries.filter((e) => e.op === 'delete').map((e) => e.rowId)).toEqual([local.person.id]);
-    // 5 suppressions logiques + 1 suppression définitive + 9 catégories + 7 lignes recréées.
-    expect(entries.filter((e) => e.createdAt >= '2026-10-21T12:00:00.000Z')).toHaveLength(22);
+    // 5 suppressions logiques + 1 suppression définitive + 12 catégories + 7 lignes recréées.
+    expect(entries.filter((e) => e.createdAt >= '2026-10-21T12:00:00.000Z')).toHaveLength(25);
   });
 
   it('ne touche pas aux données d’un autre compte', () => {

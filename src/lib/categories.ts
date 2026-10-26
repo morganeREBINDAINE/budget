@@ -2,6 +2,9 @@ import type { Category } from '@/types/budget';
 
 import { normalizeName } from './text';
 
+/** Nombre fixe de catégories d'un compte (positions 1 à CATEGORY_COUNT). */
+export const CATEGORY_COUNT = 12;
+
 export const CATEGORY_NAME_MAX_LENGTH = 20;
 
 /**

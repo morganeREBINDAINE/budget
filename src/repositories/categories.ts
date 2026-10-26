@@ -5,7 +5,7 @@ import { categories } from '@/db/schema';
 import { updateRow } from '@/repositories/write';
 import type { Category } from '@/types/budget';
 
-// Catégories du compte (9, positions 1 à 9) : lecture réactive et modification via l'outil commun.
+// Catégories du compte (12, positions 1 à 12) : lecture réactive et modification via l'outil commun.
 
 const categoryColumns = {
   id: categories.id,

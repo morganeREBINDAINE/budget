@@ -45,15 +45,19 @@ export const palette = {
 } as const;
 
 // Couleurs des catégories : nuancier arc-en-ciel vif, dans l'ordre du spectre.
-// Les catégories (position 1 → 9) les reçoivent dans cet ordre.
+// Les catégories par défaut (positions 1 → 9) ont les 9 couleurs d'origine (sans jaune, teal ni
+// indigo) ; Santé, Autre et la 12e reçoivent jaune, teal et indigo.
 export const categoryColors = {
   red: '#EF4444',
   orange: '#F97316',
   amber: '#F59E0B',
+  yellow: '#EAB308',
   lime: '#84CC16',
   green: '#22C55E',
+  teal: '#14B8A6',
   cyan: '#06B6D4',
   blue: '#3B82F6',
+  indigo: '#6366F1',
   violet: '#8B5CF6',
   pink: '#EC4899',
 } as const;

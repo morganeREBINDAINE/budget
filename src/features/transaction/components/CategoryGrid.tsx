@@ -15,7 +15,7 @@ type Props = {
 const COLUMNS = 3;
 const CHECK_SIZE = 16;
 
-// Grille 3×3 des catégories (9 au maximum : pas de virtualisation).
+// Grille 3×4 des catégories (12 au maximum : pas de virtualisation).
 export function CategoryGrid({ categories, value, onChange, error }: Props) {
   const { colors, radius, spacing, shadows, motion } = useTheme();
 

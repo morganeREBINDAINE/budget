@@ -1,6 +1,7 @@
 import { getTableColumns } from 'drizzle-orm';
 
 import { SYNCED_TABLES, syncedTables, type SyncedTableName } from '@/db/schema';
+import { CATEGORY_COUNT } from '@/lib/categories';
 import { MAX_AMOUNT_DA, MAX_AMOUNT_EUR_CENTS } from '@/lib/money';
 import { normalizeName } from '@/lib/text';
 import type { SyncedRow } from '@/repositories/write';
@@ -13,7 +14,9 @@ import { toIso, toRemote, type RemoteRow } from '@/sync/columns';
 // nouveaux ids dans le compte connecté (transfert possible d'un compte à l'autre). Le fichier est
 // validé en entier avant tout import ; les messages d'erreur ne citent jamais de montant ni de note.
 
-export const BACKUP_VERSION = 1;
+// Version 2 : 12 catégories. Les sauvegardes en version 1 (9 catégories) sont refusées.
+export const BACKUP_VERSION = 2;
+const LEGACY_VERSION = 1;
 
 // Colonnes jamais exportées : le compte est celui de l'import, les lignes supprimées sont exclues.
 const EXCLUDED_COLUMNS = new Set(['userId', 'deletedAt']);
@@ -218,14 +221,17 @@ function uniqueIds(tableName: SyncedTableName, rows: { id: string }[]): Set<stri
 // Règles propres à chaque table et références entre tables (aucune clé étrangère SQL).
 function checkRows(rows: BackupRows): void {
   const categoryIds = uniqueIds('categories', rows.categories);
-  if (rows.categories.length !== 9) fail('categories', '9 catégories attendues');
+  if (rows.categories.length !== CATEGORY_COUNT) {
+    fail('categories', `${CATEGORY_COUNT} catégories attendues`);
+  }
   const positions = new Set<number>();
   rows.categories.forEach((c, i) => {
     const path = `categories[${i}]`;
     if (isBlank(c.name)) fail(`${path}.name`, 'nom vide');
     if (!HEX_COLOR.test(c.color)) fail(`${path}.color`, 'couleur invalide');
     if (isBlank(c.icon)) fail(`${path}.icon`, 'icône vide');
-    if (c.position < 1 || c.position > 9) fail(`${path}.position`, 'position hors limites');
+    if (c.position < 1 || c.position > CATEGORY_COUNT)
+      fail(`${path}.position`, 'position hors limites');
     if (positions.has(c.position)) fail(`${path}.position`, 'position en double');
     positions.add(c.position);
   });
@@ -343,6 +349,12 @@ export function parseBackup(text: string): ParseBackupResult {
     return {
       ok: false,
       error: 'Cette sauvegarde vient d’une version plus récente de l’application.',
+    };
+  }
+  if (data.version === LEGACY_VERSION) {
+    return {
+      ok: false,
+      error: 'Ancienne sauvegarde (9 catégories) : elle ne peut plus être importée.',
     };
   }
   if (data.version !== BACKUP_VERSION) {

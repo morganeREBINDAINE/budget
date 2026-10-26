@@ -1,6 +1,7 @@
 import { BACKUP_VERSION, parseBackup, serializeBackup, type Backup } from '@/backup/format';
 import type { Database } from '@/db/client';
 import { SYNCED_TABLES } from '@/db/schema';
+import { CATEGORY_COUNT } from '@/lib/categories';
 import { importBackup, readBackup } from '@/repositories/backup';
 import { insertRow, softDeleteRow } from '@/repositories/write';
 import { createTestDatabase } from '@/test/testDatabase';
@@ -31,7 +32,7 @@ afterEach(() => {
 const tick = () => jest.setSystemTime(new Date(Date.UTC(2026, 9, 21, 8, ++minute)));
 
 function categoriesFor(userId: string, label: string) {
-  return Array.from({ length: 9 }, (_, i) => {
+  return Array.from({ length: CATEGORY_COUNT }, (_, i) => {
     tick();
     return insertRow(db, 'categories', userId, {
       name: `${label} ${i + 1}`,
@@ -272,6 +273,13 @@ describe('rejet des fichiers invalides', () => {
     );
   });
 
+  it('ancienne version à 9 catégories', () => {
+    expectError(
+      parse((f) => (f.version = 1)),
+      'Ancienne sauvegarde (9 catégories) : elle ne peut plus être importée.',
+    );
+  });
+
   it.each([0, 0.5])('version inconnue : %s', (version) => {
     expectError(
       parse((f) => (f.version = version)),
@@ -358,7 +366,7 @@ describe('rejet des fichiers invalides', () => {
   });
 
   it.each<[string, (f: Record<string, unknown>) => void, string]>([
-    ['8 catégories', (f) => rows(f, 'categories').pop(), 'categories : 9 catégories attendues'],
+    ['11 catégories', (f) => rows(f, 'categories').pop(), 'categories : 12 catégories attendues'],
     [
       'position en double',
       (f) => (rows(f, 'categories')[1].position = 1),
@@ -366,7 +374,7 @@ describe('rejet des fichiers invalides', () => {
     ],
     [
       'position hors limites',
-      (f) => (rows(f, 'categories')[8].position = 10),
+      (f) => (rows(f, 'categories')[8].position = 13),
       'categories[8].position : position hors limites',
     ],
     [

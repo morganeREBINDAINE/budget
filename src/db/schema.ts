@@ -59,7 +59,7 @@ export const categories = sqliteTable(
   (t) => [
     uniqueIndex('categories_user_position_unique').on(t.userId, t.position),
     index('categories_user_updated_idx').on(t.userId, t.updatedAt),
-    check('categories_position_range', sql`${t.position} BETWEEN 1 AND 9`),
+    check('categories_position_range', sql`${t.position} BETWEEN 1 AND 12`),
     check('categories_name_not_empty', sql`length(trim(${t.name})) > 0`),
   ],
 );

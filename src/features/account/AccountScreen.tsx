@@ -156,7 +156,7 @@ export function AccountScreen() {
           <Card padding="xs">
             <ListItem
               label="Catégories"
-              description="Nom, couleur et icône des 9 catégories"
+              description="Nom, couleur et icône des 12 catégories"
               icon={icon('shape-outline')}
               onPress={() => router.push('/categories')}
             />

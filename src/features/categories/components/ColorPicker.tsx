@@ -12,20 +12,23 @@ const colorNames: Record<keyof typeof categoryColors, string> = {
   red: 'Rouge',
   orange: 'Orange',
   amber: 'Ambre',
+  yellow: 'Jaune',
   lime: 'Citron vert',
   green: 'Vert',
+  teal: 'Bleu-vert',
   cyan: 'Cyan',
   blue: 'Bleu',
+  indigo: 'Indigo',
   violet: 'Violet',
   pink: 'Rose',
 };
 
-const COLUMNS = 5;
+const COLUMNS = 6;
 const SWATCH = minTouchTarget - 8;
 
 const swatches = Object.entries(categoryColors) as [keyof typeof categoryColors, string][];
 
-// Nuancier arc-en-ciel des catégories (9 couleurs fixes : pas de virtualisation).
+// Nuancier arc-en-ciel des catégories (12 couleurs fixes : pas de virtualisation).
 export function ColorPicker({ value, onChange }: Props) {
   const { colors, radius, spacing, motion } = useTheme();
   return (

@@ -75,7 +75,7 @@ describe('insertRow', () => {
   });
 
   it('n’écrit rien si la ligne viole une contrainte', () => {
-    expect(() => insertRow(db, 'categories', USER, { ...category, position: 10 })).toThrow();
+    expect(() => insertRow(db, 'categories', USER, { ...category, position: 13 })).toThrow();
     expect(db.select().from(categories).all()).toHaveLength(0);
     expect(queue()).toHaveLength(0);
   });
