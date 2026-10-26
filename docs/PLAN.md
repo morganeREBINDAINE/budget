@@ -27,7 +27,7 @@ Ordre de travail : **1. squelette → 2. toutes les pages (UI seule, données fa
 
 ### Hors périmètre v1
 
-iOS · multilingue / i18n (textes en français écrits en dur) · thème sombre · images (pas d'ImageKit) · trigger.dev · multi-appareils · Play Store · catégories pour les entrées.
+iOS · multilingue / i18n (textes en français écrits en dur) · thème sombre · images (pas d'ImageKit) · trigger.dev · multi-appareils · publication Play Store (seule la piste de test interne est utilisée) · catégories pour les entrées.
 
 ### Écrans
 
@@ -118,12 +118,12 @@ Catégories par défaut : Voiture, Factures, Maison, Hanout, Khaddar, Boucherie,
 
 **`debt_people`** (noms enregistrés pour l'autocomplétion)
 
-| Champ                   | Type             | Règles                                                           |
-| ----------------------- | ---------------- | ---------------------------------------------------------------- |
-| id                      | uuid             | clé primaire, généré sur le client                               |
-| user_id                 | uuid             | = `auth.uid()`                                                   |
-| name                    | text             | requis, non vide, unique par utilisateur (insensible à la casse) |
-| created_at / updated_at | timestamptz      |                                                                  |
+| Champ                   | Type        | Règles                                                           |
+| ----------------------- | ----------- | ---------------------------------------------------------------- |
+| id                      | uuid        | clé primaire, généré sur le client                               |
+| user_id                 | uuid        | = `auth.uid()`                                                   |
+| name                    | text        | requis, non vide, unique par utilisateur (insensible à la casse) |
+| created_at / updated_at | timestamptz |                                                                  |
 
 Un nom saisi qui n'existe pas encore est créé automatiquement à l'enregistrement de la dette. **Suppression définitive** (exception de `docs/STORAGE.md` §2, pas de `deleted_at`) : une personne sans dette est effacée, en local et dans Supabase.
 
@@ -180,10 +180,10 @@ Reste dû = `debts.amount_da − Σ debt_repayments.amount_da`. Reste = 0 → de
 | Synchro en arrière-plan | `expo-background-task` (+ synchro au premier plan au retour du réseau)                                                             |
 | Graphique               | `react-native-svg` (anneau dessiné à la main)                                                                                      |
 | Icônes                  | `@expo/vector-icons` (MaterialCommunityIcons)                                                                                      |
-| Export / import         | `expo-file-system` (écriture et `File.pickFileAsync`), `expo-sharing`                                                                         |
+| Export / import         | `expo-file-system` (écriture et `File.pickFileAsync`), `expo-sharing`                                                              |
 | Monitoring              | `@sentry/react-native`                                                                                                             |
 | Tests                   | Jest (`jest-expo`)                                                                                                                 |
-| Build                   | `npx expo run:android` (dev), EAS Build → APK, EAS Update                                                                          |
+| Build                   | `npx expo run:android` (dev), EAS Build → APK (recette) et AAB (Play Store, test interne), EAS Update                              |
 
 ---
 
@@ -309,6 +309,9 @@ Toutes les pages sont alimentées par `assets/maquettes/` (catégories par défa
 - [x] Google Cloud : second client OAuth Android avec la SHA-1 du keystore EAS (`eas credentials`), sinon la connexion Google échoue (`DEVELOPER_ERROR`) dans l'APK EAS. Client « Budget Android (EAS) » (`com.mrebi.budget`), keystore géré par EAS et commun aux profils `development` et `production` ; client Android debug et client Web inchangés, rien à changer côté Supabase. Vérification reportée à la recette (connexion Google dans l'APK EAS).
 - [x] Secrets EAS (Supabase, Google Web Client ID, Sentry : `EXPO_PUBLIC_SENTRY_DSN` et `SENTRY_AUTH_TOKEN` en secret). Variables du projet EAS (`eas env:set`), mêmes valeurs que `.env` : les 4 `EXPO_PUBLIC_*` en `plaintext` (lisibles dans l'APK de toute façon) dans `development` et `production` ; `SENTRY_AUTH_TOKEN` en `secret` dans `production` seulement (envoi des source maps désactivé en `development`). `.env` reste la source pour le développement local.
 - [x] EAS Update configuré (canal `production`). `expo-updates` installé, `eas update:configure` : `updates.url` dans `app.json`, `channel: "development"` / `channel: "production"` dans les profils `eas.json`. `runtimeVersion` en politique `fingerprint` (calculée depuis le natif : une mise à jour ne part jamais vers un build incompatible ; tout changement natif impose un nouveau build). Comportement par défaut : téléchargement en arrière-plan, appliqué au lancement suivant (jusqu'à deux redémarrages complets), pas d'encart dans l'app. Publication : `npm run update:prod -- "message"` (`scripts/update-production.mjs`) — refuse un arbre git non commité, lit `SENTRY_AUTH_TOKEN` dans `.env`, publie (Android, environnement EAS `production`) puis envoie les source maps de `dist/` à Sentry (`sentry-expo-upload-sourcemaps`). Nouveau build `production` requis.
+- [x] Profil `store` dans `eas.json` : AAB (`buildType: "app-bundle"`, `distribution: "store"`), environnement EAS et canal `production` (mêmes variables, mêmes mises à jour EAS que l'APK), `autoIncrement` (`versionCode` distant commun aux profils). Le profil `production` (APK) reste pour la recette. Build : `eas build --profile store --platform android`.
+- [ ] Play Console : créer l'application (`com.mrebi.budget`), premier envoi manuel de l'AAB sur la piste de test interne (Google l'impose avant toute API ; pas d'`eas submit`), liste de testeurs, fiche minimale (politique de confidentialité, sécurité des données).
+- [ ] Google Cloud : client OAuth Android avec la SHA-1 de la clé Play App Signing (Play Console → Intégrité de l'application), sinon `DEVELOPER_ERROR` dans l'app installée depuis le Play Store. Rien à changer côté Supabase.
 - [ ] Installer l'APK sur le téléphone et passer la checklist de recette.
 
 ## Checklist de recette v1
