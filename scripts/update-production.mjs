@@ -2,7 +2,7 @@
 // les source maps du bundle à Sentry (sinon les erreurs de la mise à jour
 // sont illisibles). Usage : npm run update:prod -- "message"
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const message = process.argv[2]?.trim();
 
@@ -27,6 +27,17 @@ if (message.includes('"')) fail('Le message ne doit pas contenir de guillemets d
 if (existsSync('.env')) process.loadEnvFile('.env');
 if (!process.env.SENTRY_AUTH_TOKEN)
   fail('SENTRY_AUTH_TOKEN absent de .env : source maps impossibles à envoyer.');
+
+// `sentry-expo-upload-sourcemaps` ne lit que le plugin `@sentry/react-native/expo` ; app.json
+// déclare `@sentry/react-native` (le renommer changerait le fingerprint, donc le runtime).
+// Organisation, projet et URL lui sont donc passés par l'environnement.
+const plugins = JSON.parse(readFileSync('app.json', 'utf8')).expo.plugins ?? [];
+const sentry = plugins.find((p) => Array.isArray(p) && p[0] === '@sentry/react-native')?.[1];
+if (!sentry?.organization || !sentry?.project)
+  fail('Plugin @sentry/react-native sans organization ni project dans app.json.');
+process.env.SENTRY_ORG ??= sentry.organization;
+process.env.SENTRY_PROJECT ??= sentry.project;
+if (sentry.url) process.env.SENTRY_URL ??= sentry.url;
 
 // La mise à jour embarque l'arbre de travail : il doit correspondre à un commit.
 const status = spawnSync('git', ['status', '--porcelain'], { encoding: 'utf8' });
