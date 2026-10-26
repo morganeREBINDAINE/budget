@@ -40,21 +40,28 @@ export function MonthSelector({ value, onPrevious, onNext }: Props) {
   return (
     <Row justify="center" gap="md">
       {arrow('chevron-left', 'Mois précédent', onPrevious)}
-      <Row
-        gap="sm"
-        justify="center"
-        bg="surface"
-        borderColor="borderSubtle"
-        radius="full"
-        shadow="xs"
-        paddingX="lg"
-        style={{ height: minTouchTarget, minWidth: PILL_MIN_WIDTH }}
-      >
-        <Text variant="body" weight="semibold" numberOfLines={1}>
-          {formatMonthYear(value)}
-        </Text>
-      </Row>
+      <PeriodPill label={formatMonthYear(value)} />
       {arrow('chevron-right', 'Mois suivant', onNext)}
+    </Row>
+  );
+}
+
+// Pastille de la période affichée ; seule (sans flèches) en vue à l'année.
+export function PeriodPill({ label }: { label: string }) {
+  return (
+    <Row
+      gap="sm"
+      justify="center"
+      bg="surface"
+      borderColor="borderSubtle"
+      radius="full"
+      shadow="xs"
+      paddingX="lg"
+      style={{ height: minTouchTarget, minWidth: PILL_MIN_WIDTH, alignSelf: 'center' }}
+    >
+      <Text variant="body" weight="semibold" numberOfLines={1}>
+        {label}
+      </Text>
     </Row>
   );
 }

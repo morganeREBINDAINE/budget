@@ -5,7 +5,11 @@ import { type LiveData, useReportReadError } from '@/db/liveData';
 import { useLiveQuery } from '@/db/useLiveQuery';
 import { useUserId } from '@/features/auth/AuthProvider';
 import type { YearMonth } from '@/lib/format';
-import { monthTransactionsQuery, transactionQuery } from '@/repositories/transactions';
+import {
+  monthTransactionsQuery,
+  transactionQuery,
+  yearTransactionsQuery,
+} from '@/repositories/transactions';
 import type { Transaction } from '@/types/budget';
 
 const READ_ERROR = 'Impossible de lire les transactions.';
@@ -17,6 +21,25 @@ export function useMonthTransactions(month: YearMonth): LiveData<Transaction[]> 
   const { year, month: m } = month;
   const query = useMemo(
     () => monthTransactionsQuery(db, userId, { year, month: m }),
+    [db, userId, year, m],
+  );
+  const { data, error, updatedAt } = useLiveQuery(query, [query]);
+  useReportReadError(error, READ_ERROR);
+
+  return useMemo(() => {
+    if (error) return { status: 'error' };
+    if (!updatedAt) return { status: 'loading' };
+    return { status: 'ready', data };
+  }, [data, error, updatedAt]);
+}
+
+/** Transactions des 12 mois finissant à `end` inclus pour le compte connecté, en direct. */
+export function useYearTransactions(end: YearMonth): LiveData<Transaction[]> {
+  const db = useDatabase();
+  const userId = useUserId();
+  const { year, month: m } = end;
+  const query = useMemo(
+    () => yearTransactionsQuery(db, userId, { year, month: m }),
     [db, userId, year, m],
   );
   const { data, error, updatedAt } = useLiveQuery(query, [query]);

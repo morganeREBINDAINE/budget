@@ -13,12 +13,16 @@ import {
 import { ReadErrorCard } from '@/features/db/ReadErrorCard';
 import { InitialPullError } from '@/features/sync/components/InitialPullError';
 import { LoadingRegion, RowSkeletonList } from '@/features/sync/components/Skeletons';
-import { formatMonth, type YearMonth } from '@/lib/format';
+import type { YearMonth } from '@/lib/format';
+
+import { type HomeView, periodLabels } from '../homeView';
 
 import { MonthBalanceCard } from './MonthBalanceCard';
 
 type Props = {
   month: YearMonth;
+  // Vue à l'année : libellés des 12 mois finissant à `month`.
+  view?: HomeView;
   // Échec du pull : bloc d'erreur (« Réessayer » ou reconnexion) à la place des skeletons.
   failed?: boolean;
   // Échec de la lecture locale du mois (toast déjà affiché) : bloc d'erreur.
@@ -27,10 +31,11 @@ type Props = {
 
 const CHART_SIZE = 200;
 
-// Contenu d'un mois pendant le pull initial ou le premier chargement : mêmes blocs que MonthPage,
-// données remplacées.
-export function HomeSkeleton({ month, failed = false, readError = false }: Props) {
+// Contenu d'un mois (ou des 12 mois) pendant le pull initial ou le premier chargement : mêmes
+// blocs que MonthPage, données remplacées.
+export function HomeSkeleton({ month, view = 'month', failed = false, readError = false }: Props) {
   const { spacing } = useTheme();
+  const labels = periodLabels(view, month);
   return (
     <ScrollView
       contentContainerStyle={{
@@ -57,12 +62,12 @@ export function HomeSkeleton({ month, failed = false, readError = false }: Props
               <Skeleton text="bodySmall" width={72} />
             </Row>
           </Card>
-          <MonthBalanceCard />
+          <MonthBalanceCard label={labels.balance} />
           <Stack gap="lg">
             <Row gap="sm" align="baseline">
               <Text variant="title">Détail</Text>
               <Text variant="body" color="textMuted">
-                {formatMonth(month)}
+                {labels.detail}
               </Text>
             </Row>
             <RowSkeletonList />

@@ -10,6 +10,7 @@ import {
   monthTransactionsQuery,
   transactionQuery,
   updateTransaction,
+  yearTransactionsQuery,
 } from '@/repositories/transactions';
 import { RowNotFoundError } from '@/repositories/write';
 import { createTestDatabase } from '@/test/testDatabase';
@@ -100,6 +101,30 @@ describe('monthTransactionsQuery', () => {
         .all()
         .map((t) => t.id),
     ).toEqual([december.id]);
+  });
+});
+
+describe('yearTransactionsQuery', () => {
+  it('renvoie les 12 mois finissant au mois donné inclus, du plus récent au plus ancien', () => {
+    add('2025-10-31');
+    const first = add('2025-11-01');
+    const middle = add('2026-03-15');
+    const last = add('2026-10-31');
+    add('2026-11-01');
+    expect(
+      yearTransactionsQuery(db, USER, OCTOBER)
+        .all()
+        .map((t) => t.id),
+    ).toEqual([last.id, middle.id, first.id]);
+  });
+
+  it('exclut les transactions supprimées et celles des autres comptes', () => {
+    const kept = add('2026-01-10');
+    const removed = add('2026-02-11');
+    add('2026-03-12', {}, OTHER_USER);
+    deleteTransaction(db, USER, removed.id);
+
+    expect(yearTransactionsQuery(db, USER, OCTOBER).all()).toEqual([kept]);
   });
 });
 

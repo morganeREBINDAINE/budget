@@ -2,7 +2,7 @@ import { and, desc, eq, gte, isNull, lt } from 'drizzle-orm';
 
 import type { Database } from '@/db/client';
 import { transactions } from '@/db/schema';
-import { monthBounds, type YearMonth } from '@/lib/format';
+import { monthBounds, yearWindowBounds, type YearMonth } from '@/lib/format';
 import type { TransactionValues } from '@/lib/transactions';
 import { insertRow, softDeleteRow, updateRow, type SyncedRow } from '@/repositories/write';
 import type { Transaction } from '@/types/budget';
@@ -30,7 +30,23 @@ const visibleTo = (userId: string) =>
  * (date desc puis création desc). À passer à `useLiveQuery`.
  */
 export function monthTransactionsQuery(db: Database, userId: string, month: YearMonth) {
-  const { start, end } = monthBounds(month);
+  return periodTransactionsQuery(db, userId, monthBounds(month));
+}
+
+/**
+ * Transactions non supprimées du compte sur les 12 mois finissant à `end` inclus (vue à l'année),
+ * même tri que `monthTransactionsQuery`. À passer à `useLiveQuery`.
+ */
+export function yearTransactionsQuery(db: Database, userId: string, end: YearMonth) {
+  return periodTransactionsQuery(db, userId, yearWindowBounds(end));
+}
+
+// Dates dans [start, end[ (YYYY-MM-DD), sur l'index (user_id, date).
+function periodTransactionsQuery(
+  db: Database,
+  userId: string,
+  { start, end }: { start: string; end: string },
+) {
   return db
     .select(transactionColumns)
     .from(transactions)

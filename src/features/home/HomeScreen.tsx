@@ -2,28 +2,33 @@ import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { screenPadding, Stack, useTheme } from '@/design-system';
+import { Menu, screenPadding, Stack, useTheme } from '@/design-system';
 import { useCategories } from '@/features/categories/useCategories';
-import { AppHeader } from '@/features/navigation/AppHeader';
+import { AppHeader, HeaderButton } from '@/features/navigation/AppHeader';
 import { PayDueDialog } from '@/features/recurring/components/PayDueDialog';
 import { useDuePayments } from '@/features/recurring/useRecurring';
 import { useExportData } from '@/features/backup/useExportData';
 import { useInitialPull } from '@/features/sync/useInitialPull';
 import { DeleteTransactionDialog } from '@/features/transaction/components/DeleteTransactionDialog';
-import { currentYearMonth, shiftMonth, type YearMonth } from '@/lib/format';
+import { currentYearMonth, formatYearWindow, shiftMonth, type YearMonth } from '@/lib/format';
 import type { DuePayment, Transaction } from '@/types/budget';
 
 import { FabGroup } from './components/FabGroup';
 import { HomeSkeleton } from './components/HomeSkeleton';
 import { MonthPager } from './components/MonthPager';
-import { MonthSelector } from './components/MonthSelector';
+import { MonthSelector, PeriodPill } from './components/MonthSelector';
+import { HOME_VIEW_ITEMS, type HomeView } from './homeView';
 import { MonthPage } from './MonthPage';
+import { YearPage } from './YearPage';
 
 const NO_DUES: DuePayment[] = [];
 
 export function HomeScreen() {
   const { colors } = useTheme();
   const [month, setMonth] = useState(currentYearMonth);
+  // Vue à l'année : 12 mois finissant à `month`, page fixe ; « Vue par mois » revient sur `month`.
+  // Gardée pendant la session seulement.
+  const [view, setView] = useState<HomeView>('month');
   // Échéances dues de tous les paiements (affichées sur tous les mois) ; en lecture ou en échec
   // de lecture (toast déjà affiché), aucun encart.
   const dues = useDuePayments();
@@ -72,22 +77,51 @@ export function HomeScreen() {
     [categories, duePayments, payDue, openTransaction],
   );
 
+  let content;
+  if (!ready) content = <HomeSkeleton month={month} view={view} failed={failed} />;
+  else if (view === 'year')
+    content = (
+      <YearPage
+        month={month}
+        categories={categories}
+        duePayments={duePayments}
+        onPayDue={payDue}
+        onOpenTransaction={openTransaction}
+        onDeleteTransaction={setDeleting}
+      />
+    );
+  else content = <MonthPager month={month} onChange={setMonth} renderPage={renderPage} />;
+
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
       {/* En-tête et sélecteur de mois fixes : seul le contenu du mois glisse. */}
       <Stack gap="xl" style={{ paddingHorizontal: screenPadding }}>
-        <AppHeader onExport={exportData} exporting={exporting} />
-        <MonthSelector
-          value={month}
-          onPrevious={() => setMonth((m) => shiftMonth(m, -1))}
-          onNext={() => setMonth((m) => shiftMonth(m, 1))}
+        <AppHeader
+          onExport={exportData}
+          exporting={exporting}
+          trailing={
+            <Menu
+              items={HOME_VIEW_ITEMS}
+              value={view}
+              onSelect={setView}
+              label="Vue de l'accueil"
+              renderTrigger={(open) => (
+                <HeaderButton icon="eye-outline" label="Changer de vue" onPress={open} />
+              )}
+            />
+          }
         />
+        {view === 'year' ? (
+          <PeriodPill label={formatYearWindow(month)} />
+        ) : (
+          <MonthSelector
+            value={month}
+            onPrevious={() => setMonth((m) => shiftMonth(m, -1))}
+            onNext={() => setMonth((m) => shiftMonth(m, 1))}
+          />
+        )}
       </Stack>
-      {ready ? (
-        <MonthPager month={month} onChange={setMonth} renderPage={renderPage} />
-      ) : (
-        <HomeSkeleton month={month} failed={failed} />
-      )}
+      {content}
       <FabGroup onAddIncome={addIncome} onAddExpense={addExpense} />
       <PayDueDialog
         key={paying ? `pay-${paying.payment.id}-${paying.dueDate}` : 'pay-closed'}

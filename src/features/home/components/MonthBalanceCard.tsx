@@ -8,12 +8,14 @@ type Amounts = { incomeDa: number; expenseDa: number; balanceDa: number };
 type Props = {
   // Absent pendant le chargement : skeletons à la place des montants.
   amounts?: Amounts;
+  // Libellé du reste (défaut « Reste ce mois-ci » ; « Reste sur 12 mois » en vue à l'année).
+  label?: string;
 };
 
 const ICON_SIZE = 28;
 
-// Bilan du mois sur fond sombre : reste mis en avant, entrées et dépenses en dessous.
-export function MonthBalanceCard({ amounts }: Props) {
+// Bilan de la période sur fond sombre : reste mis en avant, entrées et dépenses en dessous.
+export function MonthBalanceCard({ amounts, label = 'Reste ce mois-ci' }: Props) {
   const { colors } = useTheme();
   const overdrawn = amounts !== undefined && amounts.balanceDa < 0;
   const skeletonStyle = { backgroundColor: colors.overlayOnColor };
@@ -23,7 +25,7 @@ export function MonthBalanceCard({ amounts }: Props) {
       <Stack gap="xs">
         <Row justify="space-between">
           <Text variant="label" color="textMuted">
-            Reste ce mois-ci
+            {label}
           </Text>
           {overdrawn && <Badge label="Dépassement" variant="danger" />}
         </Row>

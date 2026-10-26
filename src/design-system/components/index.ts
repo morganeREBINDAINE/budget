@@ -19,3 +19,4 @@ export { Avatar, type AvatarProps, type AvatarSize, type AvatarVariant } from '.
 export { FormSectionList, type FormSectionListProps } from './FormSectionList';
 export { Toast, type ToastProps, type ToastVariant } from './Toast';
 export { Skeleton, type SkeletonProps } from './Skeleton';
+export { Menu, type MenuItem, type MenuProps } from './Menu';

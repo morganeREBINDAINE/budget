@@ -121,6 +121,13 @@ Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, 
 - Props : `icon` (requis), `label` (requis, accessibilité), `onPress`, `variant`, `style` (positionnement absolu laissé à l'appelant).
 - `FAB_AREA_HEIGHT` : marge basse à réserver dans une liste pour ne pas masquer le dernier élément.
 
+### Menu
+
+- Petit menu ancré sous son déclencheur (aligné sur son bord droit), carte `surface` `radius.xl`, bordure `borderSubtle`, ombre `soft`, largeur min. 200px, fond transparent. Options de 48px de haut, libellé `body`, option cochée en `primary` gras avec une coche à droite.
+- Props : `items` (`{ value, label }[]`), `value` (option cochée, facultative), `onSelect`, `renderTrigger` (`(open) => ReactNode`, ex. un bouton icône qui appelle `open`), `label` (accessibilité de la liste). Générique sur le type de `value`.
+- Fermeture : choix d'une option, toucher en dehors ou bouton retour Android.
+- Usage : choix de la vue de l'accueil (bouton œil de `AppHeader`). Listes courtes et fixes uniquement.
+
 ### SegmentedControl
 
 - Choix exclusif entre 2 ou 3 options sur une piste `surfaceMuted` ; option active sur fond blanc, ombre `xs`. Hauteur min. 48px.

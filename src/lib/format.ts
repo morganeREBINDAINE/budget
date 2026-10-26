@@ -55,6 +55,18 @@ export function monthBounds(ym: YearMonth): { start: string; end: string } {
   return { start: firstDayOf(ym), end: firstDayOf(shiftMonth(ym, 1)) };
 }
 
+// 12 mois finissant à `end` inclus, en dates YYYY-MM-DD : [1er du 1er mois, 1er du mois après `end`[.
+export function yearWindowBounds(end: YearMonth): { start: string; end: string } {
+  return { start: firstDayOf(shiftMonth(end, -11)), end: firstDayOf(shiftMonth(end, 1)) };
+}
+
+// 12 mois finissant à octobre 2026 → « Nov. 2025 – Oct. 2026 ».
+export function formatYearWindow(end: YearMonth): string {
+  const start = shiftMonth(end, -11);
+  const label = (ym: YearMonth) => `${capitalize(monthName(ym.month, { short: true }))} ${ym.year}`;
+  return `${label(start)} – ${label(end)}`;
+}
+
 export const toIsoDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
