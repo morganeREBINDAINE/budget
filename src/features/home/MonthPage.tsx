@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { FlatList, type ListRenderItem } from 'react-native';
 
 import { FAB_AREA_HEIGHT, Row, screenPadding, Stack, Text, useTheme } from '@/design-system';
@@ -6,10 +6,11 @@ import type { LiveData } from '@/db/liveData';
 import { DuePaymentsCarousel } from '@/features/recurring/components/DuePaymentsCarousel';
 import type { MonthSummary } from '@/lib/budget';
 import type { YearMonth } from '@/lib/format';
+import { filterTransactions } from '@/lib/transactionSearch';
 import type { Category, DuePayment, Transaction } from '@/types/budget';
 
 import { CategoryChart } from './components/CategoryChart';
-import { EmptyState } from './components/EmptyState';
+import { EmptyState, NoResults } from './components/EmptyState';
 import { HomeSkeleton } from './components/HomeSkeleton';
 import { MonthBalanceCard } from './components/MonthBalanceCard';
 import { OrphanExpensesNotice } from './components/OrphanExpensesNotice';
@@ -31,6 +32,9 @@ export type PeriodPageProps = {
   eurRate?: number | null;
   // Bouton « Voir en euro » / « Revenir en dinars » du bilan ; absent : pas de bouton (vue à l'année).
   onToggleEur?: () => void;
+  // Recherche de la barre haute : filtre « Détail » ; non vide, seuls le graphique et « Détail »
+  // restent affichés.
+  query?: string;
 };
 
 type ContentProps = Omit<PeriodPageProps, 'categories'> & { view: HomeView; summary: MonthSummary };
@@ -55,9 +59,15 @@ export function PeriodContent({
   onDeleteTransaction,
   eurRate = null,
   onToggleEur,
+  query = '',
 }: ContentProps) {
   const { spacing } = useTheme();
   const labels = periodLabels(view, month);
+  const searching = query.trim() !== '';
+  const transactions = useMemo(
+    () => filterTransactions(summary.transactions, query, summary.categoriesById, eurRate),
+    [summary.transactions, query, summary.categoriesById, eurRate],
+  );
 
   const renderItem: ListRenderItem<Transaction> = useCallback(
     ({ item }) => (
@@ -77,18 +87,20 @@ export function PeriodContent({
       {summary.byCategory.length > 0 && (
         <CategoryChart totals={summary.byCategory} totalDa={summary.expenseDa} eurRate={eurRate} />
       )}
-      {summary.orphanExpenses.length > 0 && (
+      {!searching && summary.orphanExpenses.length > 0 && (
         <OrphanExpensesNotice expenses={summary.orphanExpenses} eurRate={eurRate} />
       )}
-      {duePayments.length > 0 && (
+      {!searching && duePayments.length > 0 && (
         <DuePaymentsCarousel dues={duePayments} onPay={onPayDue} eurRate={eurRate} />
       )}
-      <MonthBalanceCard
-        amounts={summary}
-        label={labels.balance}
-        eurRate={eurRate}
-        onToggleEur={onToggleEur}
-      />
+      {!searching && (
+        <MonthBalanceCard
+          amounts={summary}
+          label={labels.balance}
+          eurRate={eurRate}
+          onToggleEur={onToggleEur}
+        />
+      )}
       <Row gap="sm" align="baseline">
         <Text variant="title">Détail</Text>
         <Text variant="body" color="textMuted">
@@ -100,11 +112,11 @@ export function PeriodContent({
 
   return (
     <FlatList
-      data={summary.transactions}
+      data={transactions}
       keyExtractor={(t) => t.id}
       renderItem={renderItem}
       ListHeaderComponent={header}
-      ListEmptyComponent={EmptyState}
+      ListEmptyComponent={searching ? NoResults : EmptyState}
       ItemSeparatorComponent={Separator}
       contentContainerStyle={{
         paddingHorizontal: screenPadding,
@@ -112,6 +124,8 @@ export function PeriodContent({
         paddingBottom: FAB_AREA_HEIGHT + spacing.xl,
       }}
       showsVerticalScrollIndicator={false}
+      // Une ligne s'ouvre au premier appui même clavier de recherche ouvert.
+      keyboardShouldPersistTaps="handled"
     />
   );
 }

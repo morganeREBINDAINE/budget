@@ -15,3 +15,17 @@ export function EmptyState() {
     </Card>
   );
 }
+
+// Recherche sans résultat dans la période affichée.
+export function NoResults() {
+  const { colors } = useTheme();
+  return (
+    <Card radius="xl" padding="xxl" align="center" gap="sm" variant="flat">
+      <MaterialCommunityIcons name="magnify-close" size={36} color={colors.textMuted} />
+      <Text variant="heading">Aucun résultat</Text>
+      <Text variant="bodySmall" color="textSecondary" align="center">
+        Aucune transaction de cette période ne correspond à la recherche.
+      </Text>
+    </Card>
+  );
+}

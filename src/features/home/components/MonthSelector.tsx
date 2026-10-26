@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import type { ReactNode } from 'react';
 import { Pressable } from 'react-native';
 
 import { minTouchTarget, Row, Text, useTheme } from '@/design-system';
@@ -10,10 +11,12 @@ type Props = {
   value: YearMonth;
   onPrevious: () => void;
   onNext: () => void;
+  // Action à droite du sélecteur (ex. choix de la vue) : la pastille s'étire sur la place restante.
+  trailing?: ReactNode;
 };
 
 // Sélecteur ‹ Mois Année ›.
-export function MonthSelector({ value, onPrevious, onNext }: Props) {
+export function MonthSelector({ value, onPrevious, onNext, trailing }: Props) {
   const { colors, radius, shadows } = useTheme();
 
   const arrow = (icon: 'chevron-left' | 'chevron-right', label: string, onPress: () => void) => (
@@ -38,16 +41,18 @@ export function MonthSelector({ value, onPrevious, onNext }: Props) {
   );
 
   return (
-    <Row justify="center" gap="md">
+    <Row justify="center" gap={trailing ? 'sm' : 'md'}>
       {arrow('chevron-left', 'Mois précédent', onPrevious)}
-      <PeriodPill label={formatMonthYear(value)} />
+      <PeriodPill label={formatMonthYear(value)} stretch={trailing !== undefined} />
       {arrow('chevron-right', 'Mois suivant', onNext)}
+      {trailing}
     </Row>
   );
 }
 
 // Pastille de la période affichée ; seule (sans flèches) en vue à l'année.
-export function PeriodPill({ label }: { label: string }) {
+// `stretch` : occupe la place restante de la ligne (sans largeur minimale).
+export function PeriodPill({ label, stretch = false }: { label: string; stretch?: boolean }) {
   return (
     <Row
       gap="sm"
@@ -57,7 +62,10 @@ export function PeriodPill({ label }: { label: string }) {
       radius="full"
       shadow="xs"
       paddingX="lg"
-      style={{ height: minTouchTarget, minWidth: PILL_MIN_WIDTH, alignSelf: 'center' }}
+      style={[
+        { height: minTouchTarget, alignSelf: 'center' },
+        stretch ? { flex: 1 } : { minWidth: PILL_MIN_WIDTH },
+      ]}
     >
       <Text variant="body" weight="semibold" numberOfLines={1}>
         {label}

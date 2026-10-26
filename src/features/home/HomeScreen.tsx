@@ -1,13 +1,13 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Menu, screenPadding, Stack, useTheme } from '@/design-system';
+import { Menu, Row, screenPadding, Stack, useTheme } from '@/design-system';
 import { useCategories } from '@/features/categories/useCategories';
 import { AppHeader, HeaderButton } from '@/features/navigation/AppHeader';
 import { PayDueDialog } from '@/features/recurring/components/PayDueDialog';
 import { useDuePayments } from '@/features/recurring/useRecurring';
-import { useExportData } from '@/features/backup/useExportData';
 import { useInitialPull } from '@/features/sync/useInitialPull';
 import { DeleteTransactionDialog } from '@/features/transaction/components/DeleteTransactionDialog';
 import { currentYearMonth, formatYearWindow, shiftMonth, type YearMonth } from '@/lib/format';
@@ -15,6 +15,7 @@ import type { DuePayment, Transaction } from '@/types/budget';
 
 import { EurRateDialog } from './components/EurRateDialog';
 import { FabGroup } from './components/FabGroup';
+import { HomeSearchBar } from './components/HomeSearchBar';
 import { HomeSkeleton } from './components/HomeSkeleton';
 import { MonthPager } from './components/MonthPager';
 import { MonthSelector, PeriodPill } from './components/MonthSelector';
@@ -25,7 +26,7 @@ import { YearPage } from './YearPage';
 const NO_DUES: DuePayment[] = [];
 
 export function HomeScreen() {
-  const { colors } = useTheme();
+  const { colors, spacing } = useTheme();
   const [month, setMonth] = useState(currentYearMonth);
   // Vue à l'année : 12 mois finissant à `month`, page fixe ; « Vue par mois » revient sur `month`.
   // Gardée pendant la session seulement.
@@ -34,6 +35,11 @@ export function HomeScreen() {
   // changement de mois ou de vue, et dès que l'accueil n'est plus à l'écran.
   const [eurRate, setEurRate] = useState<number | null>(null);
   const [askingRate, setAskingRate] = useState(false);
+  // Recherche dans « Détail » : la barre reste affichée tant que le champ n'est pas vide.
+  // `searchKey` remonte le champ (et lui redonne le focus) à l'appui sur la loupe.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [searchKey, setSearchKey] = useState(0);
   // Échéances dues de tous les paiements (affichées sur tous les mois) ; en lecture ou en échec
   // de lecture (toast déjà affiché), aucun encart.
   const dues = useDuePayments();
@@ -57,7 +63,26 @@ export function HomeScreen() {
     [],
   );
   const closeDelete = useCallback(() => setDeleting(null), []);
-  const { exportData, exporting } = useExportData({ errorDisplay: 'toast' });
+
+  // Loupe : ouvre la barre (focus) ; barre ouverte et vide : la referme.
+  const openSearch = () => {
+    if (!ready) return;
+    if (searchOpen && query === '') {
+      Keyboard.dismiss();
+      setSearchOpen(false);
+      return;
+    }
+    setSearchOpen(true);
+    setSearchKey((k) => k + 1);
+  };
+  const leaveSearch = () => {
+    if (query === '') setSearchOpen(false);
+  };
+  const clearSearch = () => {
+    Keyboard.dismiss();
+    setQuery('');
+    setSearchOpen(false);
+  };
 
   const payDue = useCallback(
     (due: DuePayment) => {
@@ -106,9 +131,22 @@ export function HomeScreen() {
         // Les mois voisins du carrousel restent en dinars.
         eurRate={m.year === month.year && m.month === month.month ? eurRate : null}
         onToggleEur={toggleEur}
+        query={query}
       />
     ),
-    [categories, duePayments, payDue, openTransaction, month, eurRate, toggleEur],
+    [categories, duePayments, payDue, openTransaction, month, eurRate, toggleEur, query],
+  );
+
+  const viewMenu = (
+    <Menu
+      items={HOME_VIEW_ITEMS}
+      value={view}
+      onSelect={selectView}
+      label="Vue de l'accueil"
+      renderTrigger={(open) => (
+        <HeaderButton icon="eye-outline" label="Changer de vue" onPress={open} variant="dark" />
+      )}
+    />
   );
 
   let content;
@@ -122,33 +160,40 @@ export function HomeScreen() {
         onPayDue={payDue}
         onOpenTransaction={openTransaction}
         onDeleteTransaction={setDeleting}
+        query={query}
       />
     );
   else content = <MonthPager month={month} onChange={changeMonth} renderPage={renderPage} />;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* En-tête et sélecteur de mois fixes : seul le contenu du mois glisse. */}
-      <Stack gap="xl" style={{ paddingHorizontal: screenPadding }}>
+      {/* En-tête, recherche et sélecteur de mois fixes : seul le contenu du mois glisse, avec une
+          marge sous la barre pour qu'il ne la touche pas en défilant. */}
+      <Stack gap="xl" style={{ paddingHorizontal: screenPadding, paddingBottom: spacing.md }}>
         <AppHeader
-          onExport={exportData}
-          exporting={exporting}
-          trailing={
-            <Menu
-              items={HOME_VIEW_ITEMS}
-              value={view}
-              onSelect={selectView}
-              label="Vue de l'accueil"
-              renderTrigger={(open) => (
-                <HeaderButton icon="eye-outline" label="Changer de vue" onPress={open} />
-              )}
-            />
-          }
+          trailing={<HeaderButton icon="magnify" label="Rechercher" onPress={openSearch} />}
         />
+        {(searchOpen || query !== '') && (
+          <HomeSearchBar
+            key={searchKey}
+            value={query}
+            onChange={setQuery}
+            onBlur={leaveSearch}
+            onClear={clearSearch}
+          />
+        )}
         {view === 'year' ? (
-          <PeriodPill label={formatYearWindow(month)} />
+          <Row gap="sm">
+            <PeriodPill label={formatYearWindow(month)} stretch />
+            {viewMenu}
+          </Row>
         ) : (
-          <MonthSelector value={month} onPrevious={() => shiftBy(-1)} onNext={() => shiftBy(1)} />
+          <MonthSelector
+            value={month}
+            onPrevious={() => shiftBy(-1)}
+            onNext={() => shiftBy(1)}
+            trailing={viewMenu}
+          />
         )}
       </Stack>
       {content}

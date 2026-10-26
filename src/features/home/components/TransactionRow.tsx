@@ -5,6 +5,7 @@ import { Pressable } from 'react-native';
 import { Card, Row, Stack, Text, useTheme } from '@/design-system';
 import { CategoryIcon } from '@/features/categories/components/CategoryIcon';
 import { formatAmount, formatListDate, formatTime } from '@/lib/format';
+import { transactionLabel } from '@/lib/transactionSearch';
 import type { Category, Transaction } from '@/types/budget';
 
 type Props = {
@@ -27,7 +28,7 @@ export const TransactionRow = memo(function TransactionRow({
 }: Props) {
   const { colors, motion } = useTheme();
   const isIncome = transaction.type === 'income';
-  const label = isIncome ? 'Entrée' : (category?.name ?? 'Sans catégorie');
+  const label = transactionLabel(transaction, category);
   const title = transaction.note ?? label;
   const time = formatTime(transaction.createdAt);
   const requestDelete = () => {

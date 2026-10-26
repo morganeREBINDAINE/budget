@@ -8,10 +8,11 @@ import { AppLogo } from '@/features/brand/AppLogo';
 import { useMenu } from './MenuProvider';
 
 type Props = {
-  onExport: () => void;
+  // Absent : pas de bouton d'export (ex. accueil, qui affiche la recherche à la place).
+  onExport?: () => void;
   // Export en cours : spinner à la place de l'icône, bouton désactivé.
   exporting?: boolean;
-  // Action propre à l'écran, à droite de l'export (ex. choix de la vue de l'accueil).
+  // Action propre à l'écran, à droite de l'export (ex. recherche de l'accueil).
   trailing?: ReactNode;
 };
 
@@ -27,12 +28,14 @@ export function AppHeader({ onExport, exporting = false, trailing }: Props) {
       </Row>
       <HeaderButton icon="menu" label="Ouvrir le menu" onPress={menu.open} />
       <Row gap="sm">
-        <HeaderButton
-          icon="tray-arrow-down"
-          label="Exporter les données"
-          onPress={onExport}
-          loading={exporting}
-        />
+        {onExport && (
+          <HeaderButton
+            icon="tray-arrow-down"
+            label="Exporter les données"
+            onPress={onExport}
+            loading={exporting}
+          />
+        )}
         {trailing}
       </Row>
     </Row>
@@ -44,11 +47,24 @@ export type HeaderButtonProps = {
   label: string;
   onPress: () => void;
   loading?: boolean;
+  // `dark` : fond sombre (`neutralStrong`), icône blanche (ex. choix de la vue de l'accueil).
+  variant?: 'default' | 'dark';
 };
 
 // Bouton rond de 48px de la barre haute (icône seule).
-export function HeaderButton({ icon, label, onPress, loading = false }: HeaderButtonProps) {
+export function HeaderButton({
+  icon,
+  label,
+  onPress,
+  loading = false,
+  variant = 'default',
+}: HeaderButtonProps) {
   const { colors, radius, shadows } = useTheme();
+  const dark = variant === 'dark';
+  const background = dark
+    ? { idle: colors.neutralStrong, pressed: colors.neutralStrongPressed }
+    : { idle: colors.surface, pressed: colors.surfaceMuted };
+  const iconColor = dark ? colors.textOnColor : colors.text;
   return (
     <Pressable
       onPress={onPress}
@@ -62,16 +78,16 @@ export function HeaderButton({ icon, label, onPress, loading = false }: HeaderBu
         borderRadius: radius.full,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: pressed ? colors.surfaceMuted : colors.surface,
+        backgroundColor: pressed ? background.pressed : background.idle,
         borderWidth: 1,
-        borderColor: colors.borderSubtle,
+        borderColor: dark ? colors.neutralStrong : colors.borderSubtle,
         ...shadows.xs,
       })}
     >
       {loading ? (
-        <ActivityIndicator color={colors.text} />
+        <ActivityIndicator color={iconColor} />
       ) : (
-        <MaterialCommunityIcons name={icon} size={22} color={colors.text} />
+        <MaterialCommunityIcons name={icon} size={22} color={iconColor} />
       )}
     </Pressable>
   );

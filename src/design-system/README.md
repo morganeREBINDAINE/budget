@@ -124,10 +124,10 @@ Couleurs sémantiques (`ThemeColor`) : `background`, `surface`, `surfaceMuted`, 
 
 ### Menu
 
-- Petit menu ancré sous son déclencheur (aligné sur son bord droit), carte `surface` `radius.xl`, bordure `borderSubtle`, ombre `soft`, largeur min. 200px, fond transparent. Options de 48px de haut, libellé `body`, option cochée en `primary` gras avec une coche à droite.
+- Petit menu ancré sous son déclencheur (aligné sur son bord droit), carte `surface` `radius.xl`, bordure `borderSubtle`, ombre `soft`, largeur min. 200px, fond transparent. Options de 48px de haut, libellé `body`, texte seul : option active en `primary` gras, sans coche.
 - Props : `items` (`{ value, label }[]`), `value` (option cochée, facultative), `onSelect`, `renderTrigger` (`(open) => ReactNode`, ex. un bouton icône qui appelle `open`), `label` (accessibilité de la liste). Générique sur le type de `value`.
 - Fermeture : choix d'une option, toucher en dehors ou bouton retour Android.
-- Usage : choix de la vue de l'accueil (bouton œil de `AppHeader`). Listes courtes et fixes uniquement.
+- Usage : choix de la vue de l'accueil (bouton œil sombre à droite du sélecteur de mois). Listes courtes et fixes uniquement.
 
 ### SegmentedControl
 

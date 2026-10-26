@@ -1,4 +1,3 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState, type ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
@@ -11,7 +10,7 @@ export type MenuItem<T extends string> = { value: T; label: string };
 
 export type MenuProps<T extends string> = {
   items: MenuItem<T>[];
-  // Option cochée (choix exclusif) ; absente : aucune coche.
+  // Option active (choix exclusif), en gras couleur primaire ; absente : aucune.
   value?: T;
   onSelect: (value: T) => void;
   // Déclencheur (ex. bouton icône) : appelle `open` au toucher.
@@ -21,7 +20,6 @@ export type MenuProps<T extends string> = {
 };
 
 const MIN_WIDTH = 200;
-const CHECK_SIZE = 20;
 
 type Anchor = { top: number; right: number };
 
@@ -98,9 +96,7 @@ export function Menu<T extends string>({
                   accessibilityState={{ checked }}
                   style={({ pressed }) => ({
                     minHeight: minTouchTarget,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: spacing.md,
+                    justifyContent: 'center',
                     paddingHorizontal: spacing.md,
                     borderRadius: radius.md,
                     backgroundColor: pressed ? colors.surfaceMuted : colors.transparent,
@@ -110,15 +106,9 @@ export function Menu<T extends string>({
                     variant="body"
                     weight={checked ? 'bold' : 'semibold'}
                     color={checked ? 'primary' : 'text'}
-                    style={{ flex: 1 }}
                   >
                     {item.label}
                   </Text>
-                  <MaterialCommunityIcons
-                    name="check"
-                    size={CHECK_SIZE}
-                    color={checked ? colors.primary : colors.transparent}
-                  />
                 </Pressable>
               );
             })}
