@@ -1,7 +1,7 @@
-import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { useEffect, useMemo } from 'react';
 
 import { useDatabase } from '@/db/DatabaseProvider';
+import { useLiveQuery } from '@/db/useLiveQuery';
 import { useUserId } from '@/features/auth/AuthProvider';
 import { reportError } from '@/lib/errors';
 import { pendingSyncCountQuery } from '@/repositories/syncQueue';

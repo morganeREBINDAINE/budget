@@ -16,6 +16,7 @@ Modèle hors ligne d'abord, aligné sur `docs/PLAN.md` (phases 5 et 6).
 - Suppressions logiques par défaut (`deleted_at`) ; les lectures filtrent `deleted_at IS NULL`.
 - **Suppression définitive (exception)** : autorisée uniquement pour des données peu importantes, sans historique utile et recréables à la saisie (ex. une liste de noms proposés en autocomplétion). Ces tables sont déclarées explicitement comme telles et n'ont pas de colonne `deleted_at`. Leur suppression passe par l'outil d'écriture commun : la ligne est effacée et une entrée de suppression (réduite à l'id et au `user_id`) est ajoutée à la file de synchronisation, dans la même transaction. Côté serveur, une politique RLS `DELETE` limitée au propriétaire de la ligne est ajoutée. Toute nouvelle table concernée doit être validée avant implémentation.
 - L'interface se met à jour à partir de SQLite (requêtes réactives), une fois la transaction locale validée — pas d'état optimiste en mémoire.
+- Requêtes réactives : `useLiveQuery` de `@/db/useLiveQuery` (jamais celui de `drizzle-orm/expo-sqlite`). SQLite prévient ligne par ligne ; les notifications sont regroupées (`src/db/tableChanges.ts`) : chaque requête est relue une seule fois par rafale de modifications de sa table (50 ms sans modification, 500 ms au plus), pour qu'un import ou un lot de synchro de milliers de lignes ne bloque pas l'app.
 - Les opérations composées (ex. « J'ai payé » = dépense + occurrence ; import JSON) sont atomiques.
 
 ## 3. Synchronisation

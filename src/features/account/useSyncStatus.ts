@@ -1,9 +1,9 @@
 import { and, eq } from 'drizzle-orm';
-import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 
 import { useDatabase } from '@/db/DatabaseProvider';
 import { settings } from '@/db/schema';
+import { useLiveQuery } from '@/db/useLiveQuery';
 import { useAuth, useUserId } from '@/features/auth/AuthProvider';
 import { useInitialPull } from '@/features/sync/useInitialPull';
 import { useReconnect } from '@/features/sync/useReconnect';

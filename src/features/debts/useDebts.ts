@@ -1,8 +1,8 @@
-import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { useMemo } from 'react';
 
 import { useDatabase } from '@/db/DatabaseProvider';
 import { type LiveData, useReportReadError } from '@/db/liveData';
+import { useLiveQuery } from '@/db/useLiveQuery';
 import { useUserId } from '@/features/auth/AuthProvider';
 import { remainingOf } from '@/lib/debts';
 import {

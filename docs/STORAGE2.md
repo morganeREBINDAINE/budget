@@ -84,7 +84,7 @@ Hors SQLite : le compte local (`id`, `email`, `name`) est dans SecureStore
 
 - Chaque repository expose des **constructeurs de requêtes** (ex. `monthTransactionsQuery`) filtrés
   par `user_id` et `deleted_at IS NULL`.
-- Les hooks de `features/*/use….ts` les passent à `useLiveQuery` (drizzle-orm/expo-sqlite) et
+- Les hooks de `features/*/use….ts` les passent à `useLiveQuery` (`@/db/useLiveQuery`, relectures regroupées par rafale) et
   renvoient un `LiveData<T>` : `loading` | `ready` | `error` (`src/db/liveData.ts`).
   `useReportReadError` affiche un toast en cas d'échec de lecture.
 - Les écrans affichent des skeletons pendant `loading` et un bloc d'erreur (`ReadErrorCard`)
