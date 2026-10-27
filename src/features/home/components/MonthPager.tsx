@@ -100,13 +100,18 @@ export function MonthPager({ month, onChange, renderPage }: Props) {
   }));
 
   const pages = [page - 1, page, page + 1];
+  // Le rail couvre les 3 pages : la page affichée reste dans son cadre, sinon Android ne lui
+  // transmet plus les touchers (défilement de la liste bloqué hors du mois d'origine).
+  const first = page - 1;
 
   return (
     <GestureDetector gesture={gesture}>
       <View style={styles.viewport}>
-        <Animated.View style={[StyleSheet.absoluteFill, trackStyle]}>
+        <Animated.View
+          style={[styles.track, { left: first * width, width: pages.length * width }, trackStyle]}
+        >
           {pages.map((p) => (
-            <View key={p} style={[styles.page, { left: p * width, width }]}>
+            <View key={p} style={[styles.page, { left: (p - first) * width, width }]}>
               {renderPage(shiftMonth(month, p - page))}
             </View>
           ))}
@@ -118,5 +123,6 @@ export function MonthPager({ month, onChange, renderPage }: Props) {
 
 const styles = StyleSheet.create({
   viewport: { flex: 1, overflow: 'hidden' },
+  track: { position: 'absolute', top: 0, bottom: 0 },
   page: { position: 'absolute', top: 0, bottom: 0 },
 });
